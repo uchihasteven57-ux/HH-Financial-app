@@ -1,20 +1,296 @@
-const SPREADSHEET_ID='';
-const TRANSACTION_HEADERS=['id','type','amount','date','category','note','createdAt'];
-const CATEGORY_HEADERS=['name','type','createdAt'];
-const BUDGET_HEADERS=['category','amount'];
-const GOAL_HEADERS=['name','target','saved'];
-function ss(){return SPREADSHEET_ID?SpreadsheetApp.openById(SPREADSHEET_ID):SpreadsheetApp.getActiveSpreadsheet()}
-function out(v){return ContentService.createTextOutput(JSON.stringify(v)).setMimeType(ContentService.MimeType.JSON)}
-function doGet(e){try{const a=e?.parameter?.action;if(a==='getAll')return out({ok:true,data:readAll()});if(a==='status')return out({ok:true,data:status()});return out({ok:true,message:'MoneyFlow Apps Script is online'})}catch(x){return out({ok:false,message:x.message})}}
-function doPost(e){try{const r=JSON.parse(e?.postData?.contents||'{}');if(r.action==='getAll')return out({ok:true,data:readAll()});if(r.action==='status')return out({ok:true,data:status()});if(r.action==='replaceAll'){writeAll(r);return out({ok:true,data:status()})}return out({ok:false,message:'Unknown action'})}catch(x){return out({ok:false,message:x.message})}}
-function sheet(name,headers){const s=ss().getSheetByName(name)||ss().insertSheet(name);if(s.getLastRow()===0)s.getRange(1,1,1,headers.length).setValues([headers]);s.setFrozenRows(1);return s}
-function rows(name,headers){const v=sheet(name,headers).getDataRange().getValues();if(v.length<2)return[];return v.slice(1).filter(r=>r.some(x=>x!=='')).map(r=>{const o={};headers.forEach((h,i)=>o[h]=r[i]);return o})}
-function normalizeTransaction(x){return {id:String(x.id||''),type:String(x.type||'expense'),amount:Number(x.amount||0),date:formatDate(x.date),category:String(x.category||'General'),note:String(x.note||''),createdAt:x.createdAt?new Date(x.createdAt).toISOString():new Date().toISOString()}}
-function normalizeCategory(x){return {name:String(x.name||'').trim(),type:String(x.type||'expense'),createdAt:x.createdAt?new Date(x.createdAt).toISOString():new Date().toISOString()}}
-function uniqueCategories(xs){const r=[];xs.forEach(x=>{const c=normalizeCategory(x);if(c.name&&!r.some(y=>y.name.toLowerCase()===c.name.toLowerCase()&&y.type===c.type))r.push(c)});return r}
-function fingerprint(d){return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5,JSON.stringify(d),Utilities.Charset.UTF_8))}
-function readAll(){const transactions=rows('Transactions',TRANSACTION_HEADERS).map(normalizeTransaction),categories=uniqueCategories(rows('Categories',CATEGORY_HEADERS)),budgets=rows('Budgets',BUDGET_HEADERS).map(x=>({category:String(x.category||''),amount:Number(x.amount||0)})),goals=rows('Goals',GOAL_HEADERS).map(x=>({name:String(x.name||''),target:Number(x.target||0),saved:Number(x.saved||0)}));return {transactions,categories,budgets,goals,revision:fingerprint({transactions,categories,budgets,goals})}}
-function status(){const d=readAll();return {revision:d.revision,count:d.transactions.length,categoryCount:d.categories.length,budgetCount:d.budgets.length,goalCount:d.goals.length}}
-function writeAll(p){const t=(p.transactions||[]).map(normalizeTransaction),c=uniqueCategories(p.categories||[]),b=(p.budgets||[]).map(x=>[String(x.category||''),Number(x.amount||0)]),g=(p.goals||[]).map(x=>[String(x.name||''),Number(x.target||0),Number(x.saved||0)]);writeTable('Transactions',TRANSACTION_HEADERS,t.map(x=>[x.id,x.type,x.amount,x.date,x.category,x.note,x.createdAt]));writeTable('Categories',CATEGORY_HEADERS,c.map(x=>[x.name,x.type,x.createdAt]));writeTable('Budgets',BUDGET_HEADERS,b);writeTable('Goals',GOAL_HEADERS,g)}
-function writeTable(n,h,v){const s=sheet(n,h);s.clearContents();s.getRange(1,1,1,h.length).setValues([h]);if(v.length)s.getRange(2,1,v.length,h.length).setValues(v);s.setFrozenRows(1)}
-function formatDate(v){if(!v)return'';if(Object.prototype.toString.call(v)==='[object Date]')return Utilities.formatDate(v,Session.getScriptTimeZone(),'yyyy-MM-dd');return String(v).slice(0,10)}
+/**
+ * MoneyFlow Google Sheets API
+ *
+ * Required sheets and columns are created automatically:
+ *
+ * Transactions:
+ * id | type | amount | date | category | note | loanId | createdAt
+ *
+ * Categories:
+ * name | type | createdAt
+ *
+ * Budgets:
+ * category | amount
+ *
+ * Goals:
+ * name | target | saved
+ *
+ * Loans:
+ * id | name | principal | remaining | date | note | createdAt
+ *
+ * Loan rules:
+ * - A new loan is written to Loans and also appears as an income transaction.
+ * - A payback is written as an expense transaction and reduces the selected loan's remaining balance.
+ * - Loan amounts are never counted as loan expenses. Only paybacks affect expenses.
+ */
+
+const SPREADSHEET_ID = '';
+
+const TRANSACTION_HEADERS = ['id', 'type', 'amount', 'date', 'category', 'note', 'loanId', 'createdAt'];
+const CATEGORY_HEADERS = ['name', 'type', 'createdAt'];
+const BUDGET_HEADERS = ['category', 'amount'];
+const GOAL_HEADERS = ['name', 'target', 'saved'];
+const LOAN_HEADERS = ['id', 'name', 'principal', 'remaining', 'date', 'note', 'createdAt'];
+
+function ss() {
+  return SPREADSHEET_ID
+    ? SpreadsheetApp.openById(SPREADSHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+}
+
+function out(value) {
+  return ContentService
+    .createTextOutput(JSON.stringify(value))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(e) {
+  try {
+    const action = e && e.parameter && e.parameter.action;
+    if (action === 'getAll') return out({ ok: true, data: readAll() });
+    if (action === 'status') return out({ ok: true, data: status() });
+    return out({ ok: true, message: 'MoneyFlow API is running' });
+  } catch (error) {
+    return out({ ok: false, error: error.message });
+  }
+}
+
+function doPost(e) {
+  try {
+    const request = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    const action = request.action;
+
+    if (action === 'getAll') return out({ ok: true, data: readAll() });
+    if (action === 'status') return out({ ok: true, data: status() });
+    if (action === 'replaceAll' || action === 'writeAll') {
+      return out({ ok: true, data: writeAll(request) });
+    }
+
+    return out({ ok: false, error: 'Unknown action' });
+  } catch (error) {
+    return out({ ok: false, error: error.message });
+  }
+}
+
+function sheet(name, headers) {
+  const existing = ss().getSheetByName(name);
+  const result = existing || ss().insertSheet(name);
+  if (result.getLastRow() === 0) {
+    result.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  result.setFrozenRows(1);
+  return result;
+}
+
+function rows(name, headers) {
+  const values = sheet(name, headers).getDataRange().getValues();
+  if (values.length < 2) return [];
+
+  return values.slice(1)
+    .filter(row => row.some(value => value !== ''))
+    .map(row => {
+      const object = {};
+      headers.forEach((header, index) => object[header] = row[index]);
+      return object;
+    });
+}
+
+function normalizeTransaction(value) {
+  const type = String(value.type || 'expense');
+  return {
+    id: String(value.id || Utilities.getUuid()),
+    type: type === 'loan' ? 'income' : type,
+    amount: number(value.amount),
+    date: formatDate(value.date) || today(),
+    category: String(value.category || (value.loanId ? 'Loan' : 'General')),
+    note: String(value.note || ''),
+    loanId: String(value.loanId || ''),
+    createdAt: iso(value.createdAt)
+  };
+}
+
+function normalizeCategory(value) {
+  return {
+    name: String(value.name || '').trim(),
+    type: String(value.type || 'expense'),
+    createdAt: iso(value.createdAt)
+  };
+}
+
+function normalizeBudget(value) {
+  return {
+    category: String(value.category || '').trim(),
+    amount: number(value.amount)
+  };
+}
+
+function normalizeGoal(value) {
+  return {
+    name: String(value.name || '').trim(),
+    target: number(value.target),
+    saved: number(value.saved)
+  };
+}
+
+function normalizeLoan(value) {
+  const principal = number(value.principal || value.amount);
+  return {
+    id: String(value.id || Utilities.getUuid()),
+    name: String(value.name || 'Loan').trim(),
+    principal: principal,
+    remaining: Math.max(0, number(value.remaining === undefined ? principal : value.remaining)),
+    date: formatDate(value.date) || today(),
+    note: String(value.note || ''),
+    createdAt: iso(value.createdAt)
+  };
+}
+
+function uniqueCategories(values) {
+  const result = [];
+  values.forEach(value => {
+    const category = normalizeCategory(value);
+    if (!category.name) return;
+    const duplicate = result.some(item =>
+      item.name.toLowerCase() === category.name.toLowerCase() && item.type === category.type
+    );
+    if (!duplicate) result.push(category);
+  });
+  return result;
+}
+
+function readAll() {
+  const transactions = rows('Transactions', TRANSACTION_HEADERS).map(normalizeTransaction);
+  const categories = uniqueCategories(rows('Categories', CATEGORY_HEADERS));
+  const budgets = rows('Budgets', BUDGET_HEADERS).map(normalizeBudget);
+  const goals = rows('Goals', GOAL_HEADERS).map(normalizeGoal);
+  const loans = rows('Loans', LOAN_HEADERS).map(normalizeLoan);
+
+  // For old spreadsheets, reconstruct loans from legacy loan transactions.
+  const reconstructed = loans.slice();
+  transactions
+    .filter(transaction => transaction.type === 'income' && transaction.loanId && !reconstructed.some(loan => loan.id === transaction.loanId))
+    .forEach(transaction => reconstructed.push(normalizeLoan({
+      id: transaction.loanId,
+      name: transaction.note || 'Loan',
+      principal: transaction.amount,
+      remaining: transaction.amount,
+      date: transaction.date,
+      note: transaction.note,
+      createdAt: transaction.createdAt
+    })));
+
+  return {
+    transactions: transactions,
+    categories: categories,
+    budgets: budgets,
+    goals: goals,
+    loans: applyRepayments(reconstructed, transactions),
+    revision: fingerprint({ transactions, categories, budgets, goals, loans: reconstructed })
+  };
+}
+
+function applyRepayments(loans, transactions) {
+  const result = loans.map(loan => Object.assign({}, loan));
+  transactions
+    .filter(transaction => transaction.type === 'expense' && transaction.loanId)
+    .forEach(transaction => {
+      const loan = result.find(item => item.id === transaction.loanId);
+      if (loan) loan.remaining = Math.max(0, loan.remaining - transaction.amount);
+    });
+  return result;
+}
+
+function status() {
+  const data = readAll();
+  return {
+    revision: data.revision,
+    count: data.transactions.length,
+    categoryCount: data.categories.length,
+    budgetCount: data.budgets.length,
+    goalCount: data.goals.length,
+    loanCount: data.loans.length
+  };
+}
+
+function writeAll(payload) {
+  const transactions = (payload.transactions || []).map(normalizeTransaction);
+  const categories = uniqueCategories(payload.categories || []);
+  const budgets = (payload.budgets || []).map(normalizeBudget).filter(item => item.category);
+  const goals = (payload.goals || []).map(normalizeGoal).filter(item => item.name);
+
+  // Accept loans from the new client. If the client has not yet been updated,
+  // derive them from income transactions carrying loanId.
+  let loans = (payload.loans || []).map(normalizeLoan).filter(item => item.id);
+  transactions
+    .filter(transaction => transaction.type === 'income' && transaction.loanId)
+    .forEach(transaction => {
+      if (!loans.some(loan => loan.id === transaction.loanId)) {
+        loans.push(normalizeLoan({
+          id: transaction.loanId,
+          name: transaction.note || 'Loan',
+          principal: transaction.amount,
+          remaining: transaction.amount,
+          date: transaction.date,
+          note: transaction.note,
+          createdAt: transaction.createdAt
+        }));
+      }
+    });
+  loans = applyRepayments(loans, transactions);
+
+  writeTable('Transactions', TRANSACTION_HEADERS, transactions.map(transaction => [
+    transaction.id, transaction.type, transaction.amount, transaction.date,
+    transaction.category, transaction.note, transaction.loanId, transaction.createdAt
+  ]));
+  writeTable('Categories', CATEGORY_HEADERS, categories.map(category => [
+    category.name, category.type, category.createdAt
+  ]));
+  writeTable('Budgets', BUDGET_HEADERS, budgets.map(budget => [budget.category, budget.amount]));
+  writeTable('Goals', GOAL_HEADERS, goals.map(goal => [goal.name, goal.target, goal.saved]));
+  writeTable('Loans', LOAN_HEADERS, loans.map(loan => [
+    loan.id, loan.name, loan.principal, loan.remaining,
+    loan.date, loan.note, loan.createdAt
+  ]));
+
+  return readAll();
+}
+
+function writeTable(name, headers, values) {
+  const target = sheet(name, headers);
+  target.clearContents();
+  target.getRange(1, 1, 1, headers.length).setValues([headers]);
+  if (values.length) target.getRange(2, 1, values.length, headers.length).setValues(values);
+  target.setFrozenRows(1);
+}
+
+function number(value) {
+  const result = Number(value);
+  return isFinite(result) ? result : 0;
+}
+
+function today() {
+  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+function iso(value) {
+  const date = value ? new Date(value) : new Date();
+  return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+}
+
+function formatDate(value) {
+  if (!value) return '';
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  }
+  return String(value).slice(0, 10);
+}
+
+function fingerprint(value) {
+  return Utilities.base64Encode(
+    Utilities.computeDigest(
+      Utilities.DigestAlgorithm.MD5,
+      JSON.stringify(value),
+      Utilities.Charset.UTF_8
+    )
+  );
+}
