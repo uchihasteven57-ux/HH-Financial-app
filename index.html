@@ -1,11 +1,245 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b1020"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icons/icon-192.png"><link rel="stylesheet" href="css/app.css"><title>MoneyFlow</title></head><body><div class="app"><header><div class="brand"><b>₿</b><span><strong>MoneyFlow</strong><small>Personal Finance • BI</small></span></div><div><button id="install" class="ghost hidden">Install</button><button id="theme">☾</button><button data-page="settings">⚙</button></div></header><main>
-<section id="home" class="page active"><div class="hero"><div><small id="greet">WELCOME</small><h1 id="greetTitle">Welcome back 👋</h1><p id="focusMsg">Your money story will appear here.</p></div><input id="month" type="month"></div><div class="focus"><i>✦</i><div><small>Today's focus</small><b id="focusTitle">Start your money log</b><span id="focusDetail">Add your first transaction.</span></div></div><div class="balance"><div><span>Remaining money</span><em id="pill">On track</em></div><strong id="remaining">0 MMK</strong><small>Income minus expenses, loans and credit paybacks</small><div class="progress"><i id="progress"></i></div><div><small id="committed">0% committed</small><small id="saving">0% savings rate</small></div></div><div class="stats"><article>Income<b id="income">0 MMK</b><small>Money in</small></article><article>Expenses<b id="expense">0 MMK</b><small>Daily spending</small></article><article>Loans<b id="loan">0 MMK</b><small>Debt payments</small></article><article>Credit<b id="credit">0 MMK</b><small>Paybacks</small></article></div><h2>Quick actions</h2><div class="actions"><button data-add="expense">−<b>Add Expense</b><small>Food, fuel, family</small></button><button data-add="income">+<b>Add Income</b><small>Salary, bonus</small></button><button data-add="loan">↘<b>Loan Payment</b><small>Installment</small></button><button data-add="credit">↗<b>Credit Payback</b><small>Card / credit</small></button></div><div class="panel"><div class="head"><h2>Spending breakdown</h2><button data-page="dashboard">Open BI</button></div><div id="breakdown"></div></div><div class="panel"><div class="head"><h2>Recent activity</h2><button data-page="transactions">See all</button></div><div id="recent"></div></div></section>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <title>MoneyFlow</title>
+  <style>
+    :root{--bg:#f5f7fb;--panel:#fff;--soft:#eef3ff;--text:#101827;--muted:#64748b;--line:rgba(15,23,42,.1);--primary:#2563eb;--success:#10b981;--danger:#ef4444;--warning:#f59e0b;--nav:#fff;--shadow:0 12px 28px rgba(15,23,42,.08)}
+    body.dark{--bg:#0b1020;--panel:#111827;--soft:#0f172a;--text:#e5eefb;--muted:#9fb0c8;--line:rgba(148,163,184,.2);--primary:#60a5fa;--success:#34d399;--danger:#f87171;--warning:#fbbf24;--nav:#111827}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,Segoe UI,Arial,sans-serif}body{padding-bottom:76px}
+    button,input,select{font:inherit}
+    .app{min-height:100vh}
+    header{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px max(16px,calc((100vw - 1080px)/2));background:color-mix(in srgb,var(--panel) 88%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:700}
+    .brand b{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;box-shadow:0 8px 18px rgba(37,99,235,.3)}
+    .brand span{display:flex;align-items:baseline;gap:8px}
+    .brand strong{font-size:1rem}
+    .brand small{color:var(--muted)}
+    .header-actions{display:flex;align-items:center;gap:8px}
+    .header-actions button, .tab, nav button, .ghost{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px;padding:10px 12px;cursor:pointer;transition:.2s ease}
+    .header-actions button:hover, .tab:hover, nav button:hover, .ghost:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+    .hidden{display:none!important}
+    main{width:100%}.page{display:none;max-width:1100px;margin:auto;padding:18px 18px 90px}.page.active{display:block}
+    .hero, .stats, .bi, .actions, .two{display:grid;gap:12px}
+    .hero{grid-template-columns:1.5fr .8fr;align-items:stretch}
+    .hero .panel, .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+    .hero h1,h2,h3{margin:0}
+    .hero p{margin:10px 0 0;color:var(--muted)}
+    .stats{grid-template-columns:repeat(4,1fr)}
+    .bi{grid-template-columns:repeat(3,1fr)}
+    article, .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:8px}
+    article b{font-size:1.5rem}
+    .muted{color:var(--muted)}
+    .actions{grid-template-columns:repeat(4,1fr)}
+    .actions button{min-height:52px}
+    .two{grid-template-columns:1fr 1fr}
+    .tab{padding:8px 10px;border-radius:10px}
+    .tab.active{background:var(--soft);border-color:transparent;color:var(--primary);font-weight:700}
+    .ghost{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px}
+    .page form{display:grid;gap:14px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+    .row:last-child{border-bottom:none}
+    .up{color:var(--success)}.down{color:var(--danger)}
+    .empty{color:var(--muted);padding:10px 0}
+    nav{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:8px;background:rgba(15,23,42,.8);padding:8px 10px;border-radius:18px;backdrop-filter:blur(10px);box-shadow:0 18px 38px rgba(15,23,42,.25);z-index:40}
+    nav button{display:grid;place-items:center;gap:4px;padding:8px 10px;background:transparent;border:0;color:#dfeafc;font-weight:600;min-width:66px}
+    nav button.active{background:rgba(96,165,250,.2);color:#fff}
+    nav small{font-size:10px;display:block;opacity:.8}
+    #toast{position:fixed;right:20px;bottom:84px;transform:translateY(10px);opacity:0;pointer-events:none;transition:.22s ease;background:rgba(15,23,42,.9);color:#fff;padding:10px 14px;border-radius:12px;z-index:60}
+    #toast.on{opacity:1;transform:translateY(0)}
+    @media(max-width:760px){.stats,.bi{grid-template-columns:repeat(2,1fr)}.actions{grid-template-columns:repeat(2,1fr)}.page{padding-left:14px;padding-right:14px}.hero{grid-template-columns:1fr}}
+    @media(max-width:460px){header{padding:10px}.brand span{display:none}.header-actions{gap:4px}header button{padding:8px}.stats,.bi,.actions,.two{grid-template-columns:1fr}.actions button{min-height:46px}nav{bottom:8px;left:12px;right:12px;transform:none;justify-content:space-between}nav button{flex:1;min-width:0}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand"><b>₿</b><span><strong>MoneyFlow</strong><small>Personal Finance • BI</small></span></div>
+      <div class="header-actions">
+        <button id="install" class="hidden" type="button">Install</button>
+        <button id="theme" type="button">Dark</button>
+      </div>
+    </header>
 
-<section id="dashboard" class="page"><small>MONEY INTELLIGENCE</small><h1>Dashboard</h1><p>Money flowing trend + Focus BI reports</p><div class="bi"><article>Cash flow<b id="cashflow">0 MMK</b></article><article>Top spending<b id="topSpend">—</b><small id="topAmt">0 MMK</small></article><article>Largest activity<b id="largest">—</b><small id="largestAmt">0 MMK</small></article><article>Entries<b id="rhythm">0</b></article></div><div class="panel"><div class="head"><h2>Money flowing trend</h2><small>Daily inflow vs outflow</small></div><canvas id="chart"></canvas></div><div class="panel"><h2>Focus BI</h2><div id="focusBI"></div></div><div class="panel"><h2>Category pulse</h2><div id="pulse"></div></div><div class="panel"><div class="head"><h2>Sync status</h2><b id="syncStatus">Local only</b></div><p id="syncText">Configure Google Apps Script in Settings.</p></div></section>
+    <main>
+      <section id="home" class="page active">
+        <div class="hero">
+          <div class="panel">
+            <small id="greet">WELCOME</small>
+            <h1 id="greetTitle">Welcome back 👋</h1>
+            <p id="focusMsg">Your money story will appear here.</p>
+          </div>
+          <div class="panel">
+            <small>FOCUS</small>
+            <h2 id="focusSummary">0 MMK</h2>
+            <p id="loanSummary">0 MMK</p>
+          </div>
+        </div>
 
-<section id="add" class="page"><button data-page="home">←</button><small>TRANSACTION</small><h1 id="formTitle">Add Expense</h1><div class="tabs"><button data-type="expense">Expense</button><button data-type="income">Income</button><button data-type="loan">Loan</button><button data-type="credit">Credit</button></div><form id="form" class="panel"><label>Amount<div class="amount"><span>MMK</span><input id="amount" type="number" min="1" required></div></label><div class="two"><label>Date<input id="date" type="date" required></label><label>Category<select id="category"></select></label></div><label>Note<input id="note" placeholder="What was this for?"></label><button class="primary">Save transaction</button></form></section>
+        <div class="stats">
+          <article><small>Income</small><b id="income">0 MMK</b></article>
+          <article><small>Expense</small><b id="expense">0 MMK</b></article>
+          <article><small>Credit</small><b id="credit">0 MMK</b></article>
+          <article><small>Balance</small><b id="remaining">0 MMK</b></article>
+        </div>
 
-<section id="transactions" class="page"><button data-page="home">←</button><small>HISTORY</small><h1>Transactions</h1><div class="panel"><div class="head"><h2 id="txCount">Activity</h2><button id="clear" class="danger">Clear all</button></div><div class="table"><table><thead><tr><th>Date</th><th>Activity</th><th>Amount</th><th></th></tr></thead><tbody id="rows"></tbody></table></div></div></section>
+        <div class="two">
+          <div class="panel">
+            <div class="head"><small>RECENT ACTIVITY</small><h2 id="txCount">Activity (0)</h2></div>
+            <div id="txList"></div>
+          </div>
+          <div class="panel">
+            <div class="head"><small>BUDGETS</small><h2>Monthly Budget</h2></div>
+            <div id="budgets"></div>
+          </div>
+        </div>
 
-<section id="settings" class="page"><button data-page="home">←</button><small>CUSTOMIZE</small><h1>Settings</h1><div class="panel"><div class="head"><h2>Dark mode</h2><button id="switch" class="switch"><i></i></button></div></div><div class="panel"><h2>Categories</h2><div id="cats"></div></div><div class="panel"><h2>Add category</h2><div class="two"><input id="newCat" placeholder="Category name"><select id="newType"><option value="expense">Expense</option><option value="income">Income</option><option value="loan">Loan</option><option value="credit">Credit Payback</option></select></div><button id="addCat" class="primary">Add category</button></div><div class="panel"><h2>Google Sheets sync</h2><p>Ready for Google Apps Script as a data source.</p><input id="syncUrl" placeholder="Apps Script Web App /exec URL"><div class="sync"><button id="test">Test</button><button id="pull">Pull</button><button id="push" class="primary">Push</button></div><small>Use the included google-apps-script/Code.gs.</small></div><div class="panel"><button id="export">Export backup JSON</button><label class="file">Import backup JSON<input id="import" type="file" accept=".json"></label></div></section></main>
-<nav><button data-page="home">⌂<small>Home</small></button><button data-page="dashboard">◔<small>Dashboard</small></button><button data-add="expense" class="add">＋</button><button data-page="transactions">☷<small>History</small></button><button data-page="settings">⚙<small>Settings</small></button></nav><div id="toast"></div></div><script src="js/app.js"></script></body></html>
+        <div class="two">
+          <div class="panel">
+            <div class="head"><small>GOALS</small><h2>Goals</h2></div>
+            <div id="goals"></div>
+          </div>
+          <div class="panel">
+            <div class="head"><small>REPORT</small><h2>Expense by Category</h2></div>
+            <ul id="reportList" class="report-list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="dashboard" class="page">
+        <small>MONEY INTELLIGENCE</small>
+        <h1>Dashboard</h1>
+        <p>Money flowing trend + Focus BI reports</p>
+
+        <div class="bi">
+          <article><small>Cash flow</small><b id="cashflow">0 MMK</b></article>
+          <article><small>Spent</small><b id="spent">0 MMK</b></article>
+          <article><small>Remaining</small><b id="remainingDash">0 MMK</b></article>
+        </div>
+
+        <div id="loanBI"></div>
+      </section>
+
+      <section id="add" class="page">
+        <button type="button" data-page="home" class="ghost">←</button>
+        <small>TRANSACTION</small>
+        <h1 id="formTitle">Add Expense</h1>
+
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" data-add="expense">Expense</button>
+          <button type="button" class="tab" data-add="income">Income</button>
+          <button type="button" class="tab" data-add="loan">Loan</button>
+          <button type="button" class="tab" data-add="payback">Payback</button>
+        </div>
+
+        <form id="form">
+          <label>
+            <span>Amount</span>
+            <input id="amount" name="amount" type="number" step="0.01" min="0" required>
+          </label>
+          <label>
+            <span>Category</span>
+            <select id="category" name="category"></select>
+          </label>
+          <label id="loanField" style="display:none">
+            <span>Loan</span>
+            <select id="loanSelect" name="loanSelect"></select>
+          </label>
+          <label>
+            <span>Note</span>
+            <input id="note" name="note" type="text" placeholder="Optional note">
+          </label>
+          <label>
+            <span>Date</span>
+            <input id="date" name="date" type="date">
+          </label>
+          <button type="submit">Save</button>
+        </form>
+      </section>
+
+      <section id="transactions" class="page">
+        <button type="button" data-page="home" class="ghost">←</button>
+        <small>HISTORY</small>
+        <h1>Transactions</h1>
+        <div class="panel">
+          <div class="head"><h2 id="txCountHistory">Transactions</h2></div>
+          <div id="txListHistory"></div>
+        </div>
+      </section>
+
+      <section id="settings" class="page">
+        <button type="button" data-page="home" class="ghost">←</button>
+        <small>CUSTOMIZE</small>
+        <h1>Settings</h1>
+
+        <div class="panel">
+          <div class="head"><h2>Dark mode</h2></div>
+          <label class="switch">
+            <input type="checkbox" id="switch">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="panel">
+          <div class="head"><h2>Google Sheets sync</h2></div>
+          <label>
+            <span>Sync URL</span>
+            <input id="syncUrl" type="text" placeholder="https://script.google.com/macros/s/....../exec">
+          </label>
+          <div class="actions">
+            <button type="button" data-sync="push">Push</button>
+            <button type="button" data-sync="pull">Pull</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <nav>
+      <button type="button" data-page="home">⌂<small>Home</small></button>
+      <button type="button" data-page="dashboard">◔<small>Dashboard</small></button>
+      <button type="button" data-add="expense">＋<small>Expense</small></button>
+    </nav>
+
+    <div id="toast"></div>
+  </div>
+
+  <script>
+    (() => {
+      const clean = value => String(value || '').replace(/[^\d.-]/g, '');
+      const format = value => {
+        const x = clean(value);
+        if (!x) return '';
+        const n = x.split('.');
+        n[0] = n[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return n.join('.');
+      };
+
+      document.querySelectorAll('#amount,#budgetAmount').forEach(input => {
+        input.addEventListener('input', () => {
+          input.value = format(input.value);
+        });
+      });
+
+      document.addEventListener('submit', event => {
+        if (event.target.id === 'form') {
+          document.getElementById('amount').value = clean(document.getElementById('amount').value);
+        }
+      });
+
+      document.addEventListener('click', event => {
+        const tab = event.target.closest('[data-type]');
+        if (tab && !tab.dataset.add) {
+          tab.dataset.add = tab.dataset.type;
+        }
+      });
+    })();
+  </script>
+
+  <script src="js/app.js" defer></script>
+  <script src="js/loan-bi.js" defer></script>
+</body>
+</html>
