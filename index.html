@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#0b1020">
   <link rel="manifest" href="manifest.webmanifest">
   <title>MoneyFlow v3</title>
+
   <style>
     :root{
       --bg:#f5f7fb;
-      --panel:#ffffff;
+      --panel:#fff;
       --panel-alt:#eef3ff;
-      --card:#ffffff;
       --text:#101827;
       --muted:#64748b;
       --line:rgba(15,23,42,.08);
@@ -21,14 +21,13 @@
       --success:#10b981;
       --warning:#f59e0b;
       --shadow:0 18px 40px rgba(15,23,42,.08);
-      --nav:#ffffff;
-      --contrast:#0b1020;
+      --nav:#fff;
     }
+
     body.dark{
       --bg:#0b1020;
       --panel:#111827;
       --panel-alt:#0f172a;
-      --card:#0f172a;
       --text:#e5eefb;
       --muted:#9fb0c8;
       --line:rgba(148,163,184,.18);
@@ -39,229 +38,444 @@
       --warning:#fbbf24;
       --shadow:0 18px 40px rgba(2,6,23,.65);
       --nav:#111827;
-      --contrast:#e5eefb;
     }
+
     *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--bg);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text)}
+
+    html,body{
+      margin:0;
+      min-height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family:Inter,Segoe UI,Arial,sans-serif;
+    }
+
     body{min-height:100vh}
+
     button,input,select{font:inherit}
+
+    h1,h2,h3,p{margin-top:0}
+
     .page{
       display:none;
-      min-height:calc(100vh - 72px);
-      padding:18px 18px 90px;
+      min-height:calc(100vh - 75px);
       max-width:1100px;
       margin:0 auto;
+      padding:18px 18px 95px;
     }
+
     .page.active{display:block}
+
     .hero{
-      background:linear-gradient(135deg,var(--panel-alt),var(--panel));
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+      padding:22px 20px;
+      margin-bottom:18px;
       border:1px solid var(--line);
       border-radius:22px;
-      padding:20px 18px;
+      background:linear-gradient(135deg,var(--panel-alt),var(--panel));
       box-shadow:var(--shadow);
-      display:flex;align-items:center;justify-content:space-between;gap:16px;
-      margin-bottom:18px;
     }
-    .hero h1{margin:8px 0 0;font-size:clamp(2rem,4vw,3rem);line-height:1.1}
-    .hero p{margin:8px 0 0;color:var(--muted)}
-    .hero small,.panel small,.page small{letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:var(--muted)}
+
+    .hero h1{
+      margin:8px 0 0;
+      font-size:clamp(2rem,4vw,3rem);
+      line-height:1.08;
+    }
+
+    .hero p{
+      margin:8px 0 0;
+      color:var(--muted);
+    }
+
+    small{
+      color:var(--muted);
+      font-size:11px;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+    }
+
     .pill{
+      padding:8px 12px;
+      border:1px solid rgba(37,99,235,.18);
+      border-radius:999px;
       background:rgba(37,99,235,.08);
       color:var(--primary);
-      border:1px solid rgba(37,99,235,.14);
-      padding:8px 12px;
-      border-radius:999px;
-      font-weight:700;
       font-size:12px;
+      font-weight:700;
+      white-space:nowrap;
     }
+
     .bi{
       display:grid;
       grid-template-columns:repeat(3,minmax(0,1fr));
       gap:12px;
       margin:18px 0;
     }
+
     .bi article{
-      background:var(--panel);
-      border:1px solid var(--line);
-      border-radius:18px;
-      padding:16px 14px;
-      box-shadow:var(--shadow);
-      display:flex;flex-direction:column;gap:8px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
       min-height:110px;
-    }
-    .bi article b{
-      font-size:1.6rem;
-      font-weight:800;
-      color:var(--text);
-    }
-    .panel{
-      background:var(--panel);
+      padding:16px 14px;
       border:1px solid var(--line);
       border-radius:18px;
-      padding:14px 16px;
+      background:var(--panel);
       box-shadow:var(--shadow);
+    }
+
+    .bi article b{
+      color:var(--text);
+      font-size:1.55rem;
+      font-weight:800;
+    }
+
+    .panel{
       margin-top:16px;
+      padding:16px;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:var(--panel);
+      box-shadow:var(--shadow);
     }
-    .head{display:flex;justify-content:space-between;align-items:center;gap:10px}
-    .head h2{margin:6px 0 0;font-size:1.1rem}
+
+    .head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .head h2{
+      margin:6px 0 0;
+      font-size:1.1rem;
+    }
+
     .row{
-      display:flex;align-items:center;justify-content:space-between;gap:12px;
-      padding:12px 0;border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:12px 0;
+      border-bottom:1px solid var(--line);
     }
+
     .row:last-child{border-bottom:none}
+
     .row b{font-weight:800}
     .row b.up{color:var(--success)}
     .row b.down{color:var(--danger)}
 
     .form{
-      display:grid;gap:14px;
-      background:var(--panel);
+      display:grid;
+      gap:14px;
+      padding:16px;
       border:1px solid var(--line);
       border-radius:20px;
-      padding:16px;
+      background:var(--panel);
       box-shadow:var(--shadow);
     }
+
     .tabs{
       display:flex;
-      gap:8px;
       flex-wrap:wrap;
+      gap:8px;
       margin-bottom:8px;
     }
+
     .tab{
+      padding:9px 13px;
       border:1px solid var(--line);
+      border-radius:10px;
       background:transparent;
       color:var(--text);
-      padding:8px 12px;
-      border-radius:10px;
       cursor:pointer;
     }
-    .tab.active{background:var(--panel-alt);border-color:rgba(37,99,235,.18);color:var(--primary);font-weight:700}
-    label{
-      display:grid;gap:6px;
-      font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;
+
+    .tab.active{
+      border-color:rgba(37,99,235,.25);
+      background:var(--panel-alt);
+      color:var(--primary);
+      font-weight:700;
     }
+
+    label{
+      display:grid;
+      gap:6px;
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
     input,select{
       width:100%;
-      background:transparent;
+      padding:11px 12px;
       border:1px solid var(--line);
       border-radius:12px;
-      padding:11px 12px;
+      outline:none;
+      background:transparent;
       color:var(--text);
     }
+
+    input:focus,select:focus{
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(37,99,235,.12);
+    }
+
+    /*
+      Number inputs intentionally show numbers only.
+      Currency is displayed by the app output, not inside the input.
+    */
+    .number-input{
+      font-variant-numeric:tabular-nums;
+      letter-spacing:.02em;
+    }
+
     .actions{
-      display:flex;gap:10px;flex-wrap:wrap;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
       margin-top:8px;
     }
-    button.primary,button.secondary,button.ghost{
-      border:none;border-radius:12px;padding:12px 16px;cursor:pointer;font-weight:700;
+
+    button.primary,
+    button.secondary,
+    button.ghost{
+      padding:12px 16px;
+      border:0;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:700;
     }
+
     button.primary{
       background:linear-gradient(135deg,var(--primary),#4f46e5);
-      color:white;
+      color:#fff;
     }
+
     button.secondary{
       background:linear-gradient(135deg,var(--primary-2),#14b8a6);
       color:#062a27;
     }
+
     button.ghost{
       background:rgba(148,163,184,.12);
       color:var(--text);
     }
+
     .toolbar{
-      display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      gap:10px;
       margin-bottom:12px;
     }
+
     .empty{
-      color:var(--muted); padding:12px 0; font-style:italic;
+      padding:12px 0;
+      color:var(--muted);
+      font-style:italic;
     }
-    .budget-card,.goal-card{
-      background:var(--panel-alt);
+
+    .budget-card,
+    .goal-card{
+      margin:10px 0;
+      padding:12px;
       border:1px solid var(--line);
       border-radius:16px;
-      padding:12px;
-      margin:10px 0;
+      background:var(--panel-alt);
     }
-    .budget-card .head,.goal-card .head,.loan-bi-panel .head{
-      display:flex;justify-content:space-between;align-items:center;gap:12px;
+
+    .budget-card .head,
+    .goal-card .head,
+    .loan-bi-panel .head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
     }
+
     .bar{
       height:8px;
+      margin:10px 0 8px;
+      overflow:hidden;
       border-radius:999px;
       background:rgba(148,163,184,.18);
-      overflow:hidden;
-      margin:10px 0 8px;
     }
+
     .bar i{
-      display:block;height:100%;
-      background:linear-gradient(90deg,#2dd4bf,#60a5fa);
+      display:block;
+      height:100%;
       border-radius:inherit;
+      background:linear-gradient(90deg,#2dd4bf,#60a5fa);
     }
-    .budget-card.over .bar i{background:linear-gradient(90deg,#ef4444,#f97316)}
-    .budget-card.near .bar i{background:linear-gradient(90deg,#fbbf24,#f59e0b)}
+
+    .budget-card.over .bar i{
+      background:linear-gradient(90deg,#ef4444,#f97316);
+    }
+
+    .budget-card.near .bar i{
+      background:linear-gradient(90deg,#fbbf24,#f59e0b);
+    }
+
+    .loan-bi-panel{margin-top:16px}
+
     .loan-bi-legend{
-      display:flex;gap:16px;flex-wrap:wrap;
-      font-size:12px;margin:8px 0 14px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:16px;
+      margin:8px 0 14px;
       color:var(--muted);
+      font-size:12px;
     }
-    .loan-bi-legend span{display:flex;align-items:center;gap:6px}
+
+    .loan-bi-legend span{
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
     .loan-bi-legend i{
-      width:10px;height:10px;border-radius:3px;display:inline-block;
+      display:inline-block;
+      width:10px;
+      height:10px;
+      border-radius:3px;
     }
+
     .loan-key{background:#60a5fa}
     .payback-key{background:#f97316}
+
     .loan-chart{
-      height:220px;display:flex;align-items:stretch;gap:10px;
-      border-bottom:1px solid var(--line);overflow-x:auto;padding:0 4px;
+      display:flex;
+      align-items:stretch;
+      gap:10px;
+      height:220px;
+      padding:0 4px;
+      overflow-x:auto;
+      border-bottom:1px solid var(--line);
     }
+
     .loan-chart-col{
-      min-width:70px;height:100%;display:flex;flex-direction:column;align-items:center;
-      justify-content:flex-end;gap:4px;font-size:11px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-end;
+      gap:4px;
+      min-width:70px;
+      height:100%;
+      font-size:11px;
     }
-    .loan-bars{height:175px;display:flex;align-items:flex-end;gap:4px}
-    .loan-bar,.payback-bar{
-      display:block;width:18px;min-height:2px;border-radius:5px 5px 0 0;
+
+    .loan-bars{
+      display:flex;
+      align-items:flex-end;
+      gap:4px;
+      height:175px;
     }
-    .loan-bar{background:linear-gradient(180deg,#60a5fa,#2563eb)}
-    .payback-bar{background:linear-gradient(180deg,#fb923c,#ea580c)}
+
+    .loan-bar,
+    .payback-bar{
+      display:block;
+      width:18px;
+      min-height:2px;
+      border-radius:5px 5px 0 0;
+    }
+
+    .loan-bar{
+      background:linear-gradient(180deg,#60a5fa,#2563eb);
+    }
+
+    .payback-bar{
+      background:linear-gradient(180deg,#fb923c,#ea580c);
+    }
+
     .loan-chart-col b{
-      font-size:10px;color:var(--muted);
-      white-space:nowrap;overflow:hidden;max-width:70px;text-overflow:ellipsis;
+      max-width:70px;
+      overflow:hidden;
+      color:var(--muted);
+      font-size:10px;
+      text-overflow:ellipsis;
+      white-space:nowrap;
     }
 
     nav{
-      position:fixed;left:0;right:0;bottom:0;
-      background:var(--nav);
-      border-top:1px solid var(--line);
-      box-shadow:0 -10px 25px rgba(2,6,23,.08);
-      display:flex;justify-content:space-between;align-items:center;
-      padding:8px 18px 12px;
+      position:fixed;
+      right:0;
+      bottom:0;
+      left:0;
       z-index:20;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:8px 18px 12px;
+      border-top:1px solid var(--line);
+      background:var(--nav);
+      box-shadow:0 -10px 25px rgba(2,6,23,.08);
     }
+
     nav button{
-      background:none;border:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px;
-      min-width:64px;cursor:pointer;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:4px;
+      min-width:64px;
+      border:0;
+      background:none;
+      color:var(--muted);
+      cursor:pointer;
     }
-    nav button.active{color:var(--primary);}
-    .add{
+
+    nav button.active{color:var(--primary)}
+
+    nav .add{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:54px;
+      height:54px;
+      border-radius:16px;
       background:linear-gradient(135deg,var(--primary),#4f46e5);
-      color:#fff!important;
-      width:54px;height:54px;border-radius:16px;display:flex;align-items:center;justify-content:center;
+      color:#fff;
       box-shadow:0 12px 24px rgba(37,99,235,.35);
     }
+
     .toast{
-      position:fixed;right:16px;bottom:92px;
-      background:#111827;color:#fff;border-radius:12px;padding:10px 14px;
-      box-shadow:var(--shadow);opacity:0;transform:translateY(12px);transition:.2s;
-      pointer-events:none;font-size:14px;z-index:30;
+      position:fixed;
+      right:16px;
+      bottom:92px;
+      z-index:30;
+      padding:10px 14px;
+      border-radius:12px;
+      background:#111827;
+      color:#fff;
+      font-size:14px;
+      opacity:0;
+      pointer-events:none;
+      transform:translateY(12px);
+      transition:.2s;
     }
-    .toast.on{opacity:1;transform:translateY(0)}
+
+    .toast.on{
+      opacity:1;
+      transform:translateY(0);
+    }
+
     @media (max-width:680px){
       .bi{grid-template-columns:1fr}
-      .page{padding:18px 14px 88px}
-      .hero{flex-direction:column;align-items:flex-start}
+      .page{padding:18px 14px 92px}
+      .hero{
+        align-items:flex-start;
+        flex-direction:column;
+      }
     }
   </style>
 </head>
+
 <body>
   <div id="toast" class="toast"></div>
 
@@ -282,10 +496,12 @@
           <h2>Latest Money Focus</h2>
         </div>
       </div>
+
       <div class="row">
-        <span>Transaction overview</span>
+        <span>Income overview</span>
         <b id="focusSummary">0 MMK</b>
       </div>
+
       <div class="row">
         <span>Loan balance</span>
         <b id="loanSummary">0 MMK</b>
@@ -303,10 +519,12 @@
         <small>Cash flow</small>
         <b id="cashflow">0 MMK</b>
       </article>
+
       <article>
         <small>Spent</small>
         <b id="spent">0 MMK</b>
       </article>
+
       <article>
         <small>Remaining</small>
         <b id="remaining">0 MMK</b>
@@ -355,7 +573,8 @@
   </section>
 
   <section id="add" class="page">
-    <button class="ghost" data-page="home">← Back</button>
+    <button type="button" class="ghost" data-page="home">← Back</button>
+
     <small>TRANSACTION</small>
     <h1 id="formTitle">Add Expense</h1>
 
@@ -385,12 +604,25 @@
 
       <label>
         Amount
-        <input id="amount" type="number" step="0.01" min="0" placeholder="0">
+        <input
+          id="amount"
+          class="number-input"
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          placeholder="0"
+          aria-label="Amount"
+        >
       </label>
 
       <label>
         Note
-        <input id="note" type="text" maxlength="100" placeholder="Add note">
+        <input
+          id="note"
+          type="text"
+          maxlength="100"
+          placeholder="Add note"
+        >
       </label>
 
       <div class="actions">
@@ -401,7 +633,8 @@
   </section>
 
   <section id="transactions" class="page">
-    <button class="ghost" data-page="home">← Back</button>
+    <button type="button" class="ghost" data-page="home">← Back</button>
+
     <small>HISTORY</small>
     <h1>Transactions</h1>
 
@@ -414,11 +647,17 @@
       </label>
     </div>
 
-    <div id="txList" class="panel"></div>
+    <div class="panel">
+      <div class="head">
+        <h2 id="txCount">Activity</h2>
+      </div>
+      <div id="txList"></div>
+    </div>
   </section>
 
   <section id="settings" class="page">
-    <button class="ghost" data-page="home">← Back</button>
+    <button type="button" class="ghost" data-page="home">← Back</button>
+
     <small>CUSTOMIZE</small>
     <h1>Settings</h1>
 
@@ -428,7 +667,7 @@
           <small>Theme</small>
           <h2>Dark mode</h2>
         </div>
-        <button id="switch" class="secondary" type="button">Toggle</button>
+        <button id="switch" type="button" class="secondary">Toggle</button>
       </div>
     </div>
 
@@ -442,7 +681,11 @@
 
       <label style="margin-top:12px;">
         Apps Script URL
-        <input id="syncUrl" type="url" placeholder="https://script.google.com/macros/s.../exec">
+        <input
+          id="syncUrl"
+          type="url"
+          placeholder="https://script.google.com/macros/s/.../exec"
+        >
       </label>
 
       <div class="actions">
@@ -464,10 +707,20 @@
           Budget category
           <select id="budgetCategory"></select>
         </label>
+
         <label>
           Budget amount
-          <input id="budgetAmount" type="number" step="0.01" min="0" placeholder="0">
+          <input
+            id="budgetAmount"
+            class="number-input"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            placeholder="0"
+            aria-label="Budget amount"
+          >
         </label>
+
         <div class="actions">
           <button type="submit" class="primary">Save budget</button>
         </div>
@@ -476,373 +729,119 @@
   </section>
 
   <nav>
-    <button data-page="home" class="active">⌂<small>Home</small></button>
-    <button data-page="dashboard">◔<small>Dashboard</small></button>
-    <button data-add="expense" class="add">＋</button>
-    <button data-page="transactions">◫<small>History</small></button>
-    <button data-page="settings">⚙<small>Settings</small></button>
+    <button type="button" data-page="home" class="active">
+      ⌂
+      <small>Home</small>
+    </button>
+
+    <button type="button" data-page="dashboard">
+      ◔
+      <small>Dashboard</small>
+    </button>
+
+    <button type="button" data-add="expense" class="add">
+      ＋
+    </button>
+
+    <button type="button" data-page="transactions">
+      ◫
+      <small>History</small>
+    </button>
+
+    <button type="button" data-page="settings">
+      ⚙
+      <small>Settings</small>
+    </button>
   </nav>
 
+  <!--
+    This script is intentionally loaded separately.
+    Do not paste app.js inside this file.
+  -->
+  <script src="js/app.js" defer></script>
+
+  <!--
+    Number input enhancement:
+    - Shows comma separators while typing.
+    - Does not add currency inside the input.
+    - Removes commas before app.js converts the value with Number().
+  -->
   <script>
     (() => {
       'use strict';
-      const KEY='moneyflow-v3', $=id=>document.getElementById(id), today=new Date().toISOString().slice(0,10);
 
-      const defaults=[
-        ['Food & Drinks','expense'],
-        ['Transportation','expense'],
-        ['Family','expense'],
-        ['Housing','expense'],
-        ['Utilities','expense'],
-        ['Shopping','expense'],
-        ['Health','expense'],
-        ['Education','expense'],
-        ['Salary','income'],
-        ['Bonus','income']
-      ];
-
-      const fallback={
-        transactions:[],
-        categories:defaults.map(([name,type])=>({name,type})),
-        budgets:[],
-        goals:[],
-        loans:[],
-        settings:{theme:'light',syncUrl:'',syncRevision:'',lastSynced:''},
-        reportMonth:today.slice(0,7)
-      };
-
-      let state=load(), syncing=false;
-      state.settings=Object.assign({},fallback.settings,state.settings||{});
-      state.budgets=Array.isArray(state.budgets)?state.budgets:[];
-      state.goals=Array.isArray(state.goals)?state.goals:[];
-      state.loans=Array.isArray(state.loans)?state.loans:[];
-      state.transactions=Array.isArray(state.transactions)?state.transactions:[];
-      state.categories=Array.isArray(state.categories)&&state.categories.length?state.categories:fallback.categories;
-      state.currentType=state.currentType||'expense';
-
-      function load(){try{return Object.assign({},fallback,JSON.parse(localStorage.getItem(KEY)||'null')||{})}catch(e){return fallback}}
-      function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
-      function money(n){return `${Math.round(Number(n)||0).toLocaleString()} MMK`}
-      function esc(v){return String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]))}
-      function toast(m){const e=$('toast');if(!e)return;e.textContent=m;e.classList.add('on');clearTimeout(e._timer);e._timer=setTimeout(()=>e.classList.remove('on'),2200)}
-      function month(){return state.reportMonth||today.slice(0,7)}
-      function items(){return state.transactions.filter(t=>String(t.date||'').slice(0,7)===month())}
-
-      function totals(xs){
-        return xs.reduce((r,t)=>{
-          const n=Number(t.amount)||0;
-          if(t.type==='income') r.income+=n;
-          else if(t.type==='expense') r.expense+=n;
-          else if(t.type==='credit') r.credit+=n;
-          return r;
-        }, {income:0, expense:0, credit:0});
+      function cleanNumber(value) {
+        return String(value || '').replace(/[^\d.-]/g, '');
       }
 
-      function renderLoanSelect(){
-        const el=$('loanSelect');
-        if(!el)return;
-        const active=state.loans.filter(l=>Number(l.remaining)>0);
-        if(!active.length){el.innerHTML='<option value="">No active loan</option>';return;}
-        el.innerHTML=active.map(l=>`<option value="${esc(l.id)}">${esc(l.name||'Loan')} (${money(l.remaining)})</option>`).join('');
+      function formatNumber(value) {
+        const cleaned = cleanNumber(value);
+
+        if (!cleaned) return '';
+
+        const negative = cleaned.startsWith('-');
+        const unsigned = negative ? cleaned.slice(1) : cleaned;
+        const parts = unsigned.split('.');
+        const integer = parts[0] || '0';
+        const decimal = parts.length > 1 ? `.${parts.slice(1).join('')}` : '';
+
+        const formattedInteger = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return `${negative ? '-' : ''}${formattedInteger}${decimal}`;
       }
 
-      function updateMonthOptions(){
-        const el=$('month');
-        if(!el)return;
-        const months = Array.from(new Set((state.transactions||[]).map(t => String(t.date||'').slice(0,7))).filter(Boolean)).sort();
-        if(!months.length){
-          el.innerHTML='<option value="">Current month</option>';
-          return;
-        }
-        el.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+      function formatInput(input) {
+        if (!input) return;
+        input.value = formatNumber(input.value);
       }
 
-      function greeting(){
-        const h=new Date().getHours(),part=h<12?'Morning':h<17?'Afternoon':h<21?'Evening':'Night';
-        if($('greet'))$('greet').textContent=`GOOD ${part.toUpperCase()}`;
-        if($('greetTitle'))$('greetTitle').textContent='Welcome back 👋';
-        if($('focusSummary'))$('focusSummary').textContent=money((state.transactions||[]).reduce((sum,t)=>sum + (t.type==='income' ? Number(t.amount)||0 : 0),0));
-        if($('loanSummary'))$('loanSummary').textContent=money((state.loans||[]).reduce((sum,l)=>sum + (Number(l.remaining)||0),0));
+      function stripInput(input) {
+        if (!input) return;
+        input.value = cleanNumber(input.value);
       }
 
-      function setType(type){
-        state.currentType=type;
-        const titles={expense:'Add Expense',income:'Add Income',loan:'Add Loan',payback:'Add Loan Payback',credit:'Add Credit Payment'};
-        if($('formTitle'))$('formTitle').textContent=titles[type]||'Add Entry';
-        if($('amount'))$('amount').value='';
-        if($('note'))$('note').value='';
-        if($('loanSelect'))$('loanSelect').disabled=type!=='payback';
-        if($('loanField'))$('loanField').style.display = type === 'payback' ? 'block' : 'none';
-        populateCategories();
-      }
+      function setupInput(id) {
+        const input = document.getElementById(id);
+        if (!input) return;
 
-      function populateCategories(){
-        const s=$('category'); if(!s)return;
-        const type=state.currentType==='payback'?'expense':state.currentType;
-        const list=state.categories.filter(c=>c.type===type);
-        s.innerHTML=list.length?list.map(c=>`<option>${esc(c.name)}</option>`).join(''):'<option>General</option>';
-      }
+        input.addEventListener('input', () => {
+          const start = input.selectionStart;
+          const before = input.value;
+          const formatted = formatNumber(before);
 
-      function show(id){
-        document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id===id));
-        document.querySelectorAll('nav [data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===id));
-      }
+          input.value = formatted;
 
-      function budgetRows(){
-        const spent={};
-        items().filter(t=>t.type==='expense').forEach(t=>spent[t.category||'General']=(spent[t.category||'General']||0)+Number(t.amount||0));
-        return state.budgets.map(b=>{
-          const target=Number(b.amount)||0, used=spent[b.category]||0, pct=target?Math.min(100,Math.round(used/target*100)):0;
-          return {category:b.category, amount:target, used, pct};
-        }).filter(b=>b.amount>0);
-      }
+          if (document.activeElement === input) {
+            const addedSeparators = (formatted.match(/,/g) || []).length -
+              (before.match(/,/g) || []).length;
 
-      function renderBudgets(){
-        const rows=budgetRows();
-        const html=rows.length?rows.map(b=>`<div class=\"budget-card ${b.pct>=100?'over':b.pct>=80?'near':''}\">
-          <div class=\"head\"><b>${esc(b.category)}</b><strong>${money(b.used)}</strong></div>
-          <div class=\"bar\"><i style=\"width:${Math.min(100,b.pct)}%\"></i></div>
-          <small>${money(b.amount)} budget</small>
-        </div>`).join(''):'<div class=\"empty\">No budgets yet</div>';
-        const el=$('budgets'); if(el)el.innerHTML=html;
-      }
+            const nextPosition = Math.max(
+              0,
+              Math.min(formatted.length, (start || formatted.length) + addedSeparators)
+            );
 
-      function renderGoals(){
-        const html=state.goals.length?state.goals.map(g=>{
-          const pct=g.target?Math.min(100,Number(g.saved||0)/g.target*100):0;
-          return `<div class=\"goal-card\">
-            <div class=\"head\"><b>${esc(g.name)}</b><strong>${money(g.saved||0)}</strong></div>
-            <div class=\"bar\"><i style=\"width:${pct}%\"></i></div>
-            <small>${money(g.target||0)} target</small>
-          </div>`;
-        }).join(''):'<div class=\"empty\">No goals yet</div>';
-        const el=$('goals'); if(el)el.innerHTML=html;
-      }
-
-      function renderReports(){
-        const xs=items(), t=totals(xs), grouped={};
-        xs.filter(x=>x.type==='expense').forEach(x=>grouped[x.category||'General']=(grouped[x.category||'General']||0)+Number(x.amount||0));
-        const top=Object.entries(grouped).sort((a,b)=>b[1]-a[1]).slice(0,5);
-        const el=$('reportList');
-        if(el)el.innerHTML=top.length?top.map(([name,val])=>`<li><span>${esc(name)}</span><b>${money(val)}</b></li>`).join(''):'<li><span>No expense data</span><b>0 MMK</b></li>';
-        if($('cashflow'))$('cashflow').textContent=money(t.income-t.expense-t.credit);
-        if($('spent'))$('spent').textContent=money(t.expense);
-        if($('remaining'))$('remaining').textContent=money(t.income-t.expense-t.credit);
-      }
-
-      function loanTrend(){
-        const result={};
-        const txs=state.transactions||[];
-        txs.forEach(tx=>{
-          if(!tx.loanId) return;
-          const m=String(tx.date||'').slice(0,7);
-          if(!m) return;
-          if(!result[m]) result[m]={loan:0,payback:0};
-          if(tx.type==='income') result[m].loan += Number(tx.amount)||0;
-          if(tx.type==='expense') result[m].payback += Number(tx.amount)||0;
-        });
-        return Object.keys(result).sort().slice(-6).map(m=>({month:m,loan:result[m].loan,payback:result[m].payback}));
-      }
-
-      function renderLoanBI(){
-        const host=$('loanBI');
-        if(!host)return;
-        const rows=loanTrend();
-        if(!rows.length){
-          host.innerHTML='<div class=\"empty\">No loan or payback data yet</div>';
-          return;
-        }
-        const max=Math.max(1,...rows.flatMap(r=>[r.loan,r.payback]));
-        host.innerHTML=`
-          <div class=\"loan-bi-legend\">
-            <span><i class=\"loan-key\"></i>Loan received</span>
-            <span><i class=\"payback-key\"></i>Payback</span>
-          </div>
-          <div class=\"loan-chart\">
-            ${rows.map(r => `
-              <div class=\"loan-chart-col\">
-                <div class=\"loan-bars\">
-                  <span class=\"loan-bar\" title=\"Loan: ${money(r.loan)}\" style=\"height:${Math.max(2,r.loan/max*100)}%\"></span>
-                  <span class=\"payback-bar\" title=\"Payback: ${money(r.payback)}\" style=\"height:${Math.max(2,r.payback/max*100)}%\"></span>
-                </div>
-                <small>${esc(r.month)}</small>
-                <b>${money(r.loan-r.payback)}</b>
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }
-
-      function render(){
-        greeting();
-        renderLoanSelect();
-        updateMonthOptions();
-        const xs=items(), t=totals(xs), net=t.income-t.expense-t.credit;
-        [['income',t.income],['expense',t.expense],['credit',t.credit],['remaining',net]].forEach(([key,val])=>{
-          const el=$(key); if(el)el.textContent=money(val);
-        });
-        if($('txCount'))$('txCount').textContent=`Activity (${xs.length})`;
-        const el=$('txList');
-        if(el)el.innerHTML=xs.slice().reverse().map(tx=>`<div class=\"row\"><span>${esc(tx.type.toUpperCase())} ${esc(tx.category||'General')}</span><b class=\"${tx.type==='income'?'up':'down'}\">${tx.type==='income'?'+':'-'}${money(tx.amount)}</b></div>`).join('')||'<div class=\"empty\">No transactions</div>';
-        renderBudgets(); renderGoals(); renderReports(); renderLoanBI(); theme();
-      }
-
-      function injectPlanningUI(){
-        if($('planningStyles'))return;
-        const st=document.createElement('style');
-        st.id='planningStyles';
-        st.textContent='.planning-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.budget-card,.goal-card,.panel{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px}.budget-card .head,.goal-card .head,.loan-bi-panel .head{display:flex;justify-content:space-between;align-items:center}.bar{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:linear-gradient(90deg,#2dd4bf,#60a5fa);border-radius:inherit}.budget-card.over .bar i{background:linear-gradient(90deg,#ef4444,#f97316)}.budget-card.near .bar i{background:linear-gradient(90deg,#fbbf24,#f59e0b)}.loan-bi-panel{margin-top:16px}.loan-bi-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin:8px 0 14px}.loan-bi-legend span{display:flex;align-items:center;gap:6px}.loan-bi-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}.loan-key{background:#60a5fa}.payback-key{background:#f97316}.loan-chart{height:220px;display:flex;align-items:stretch;gap:10px;border-bottom:1px solid rgba(255,255,255,.16);overflow-x:auto;padding:0 4px}.loan-chart-col{min-width:70px;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;font-size:11px}.loan-chart-col b{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;max-width:70px;text-overflow:ellipsis}.loan-bars{height:175px;display:flex;align-items:flex-end;gap:4px}.loan-bar,.payback-bar{display:block;width:18px;min-height:2px;border-radius:5px 5px 0 0}.loan-bar{background:linear-gradient(180deg,#60a5fa,#2563eb)}.payback-bar{background:linear-gradient(180deg,#fb923c,#ea580c)}';
-        document.head.appendChild(st);
-      }
-
-      async function api(action,payload={}){
-        if(!state.settings.syncUrl) throw Error('Add the Apps Script URL first.');
-        const r = await fetch(state.settings.syncUrl, {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(Object.assign({action}, payload))
-        });
-        const out = await r.json().catch(()=>({}));
-        if(!out || !out.ok) throw Error((out && out.error) || 'Sync failed');
-        return out.data || out;
-      }
-
-      async function pushChanges(){
-        if(syncing || !state.settings.syncUrl) return;
-        syncing=true;
-        try{
-          const r = await api('replaceAll', {
-            transactions: state.transactions,
-            categories: state.categories,
-            budgets: state.budgets,
-            goals: state.goals,
-            loans: state.loans
-          });
-          state.settings.syncRevision = (r && r.revision) || state.settings.syncRevision;
-          state.settings.lastSynced = new Date().toISOString();
-          save();
-          toast('Synced to Google Sheets');
-        }catch(e){toast(e.message || 'Sync failed');}
-        finally{syncing=false; render();}
-      }
-
-      async function pull(){
-        if(syncing || !state.settings.syncUrl) return;
-        syncing=true;
-        try{
-          const r = await api('getAll');
-          if(r && r.transactions){
-            state.transactions = r.transactions || [];
-            state.categories = r.categories || [];
-            state.budgets = r.budgets || [];
-            state.goals = r.goals || [];
-            state.loans = r.loans || [];
-            save();
-            toast('Pulled from Google Sheets');
+            input.setSelectionRange(nextPosition, nextPosition);
           }
-        }catch(e){toast(e.message || 'Pull failed');}
-        finally{syncing=false; render();}
+        });
+
+        input.addEventListener('blur', () => formatInput(input));
       }
 
-      document.addEventListener('click', e => {
-        const p=e.target.closest('[data-page]');
-        if(p) return show(p.dataset.page);
-        const a=e.target.closest('[data-add]');
-        if(a){ setType(a.dataset.add); show('add'); return; }
-        const syncBtn=e.target.closest('[data-sync]');
-        if(syncBtn){ if(syncBtn.dataset.sync==='push') return pushChanges(); if(syncBtn.dataset.sync==='pull') return pull(); }
-      });
+      setupInput('amount');
+      setupInput('budgetAmount');
 
-      document.addEventListener('submit', e => {
-        if(e.target.id === 'budgetForm'){
-          e.preventDefault();
-          const category=$('budgetCategory').value, amount=Number($('budgetAmount').value);
-          if(!category || amount<=0) return toast('Enter a valid budget amount');
-          state.budgets = state.budgets.filter(b=>b.category!==category);
-          state.budgets.push({category, amount});
-          save();
-          render();
-          toast('Budget saved');
-          return;
+      /*
+        This listener runs during capture before app.js receives submit.
+        It ensures Number("10,000") never becomes NaN.
+      */
+      document.addEventListener('submit', event => {
+        if (event.target.id === 'form') {
+          stripInput(document.getElementById('amount'));
         }
 
-        if(e.target.id === 'form'){
-          e.preventDefault();
-          const amount=Number($('amount').value);
-          if(!amount || amount<=0) return toast('Enter an amount greater than 0');
-          const type=state.currentType;
-          const date=$('date')?$('date').value||today:today;
-          const note=($('note')&&$('note').value||'').trim();
-          let loanId=$('loanSelect')?$('loanSelect').value||'':'';
-          const tx={id:`${Date.now()}-${Math.random().toString(16).slice(2)}`, type, amount, date, category:($('category')&&$('category').value)||'General', note, loanId, createdAt:new Date().toISOString()};
-
-          if(type === 'loan'){
-            tx.type='income';
-            tx.category='Loan';
-            tx.loanId = loanId || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-            const existing=state.loans.find(l=>String(l.id)===String(tx.loanId));
-            if(existing){
-              existing.principal=(Number(existing.principal)||0)+amount;
-              existing.remaining=(Number(existing.remaining)||0)+amount;
-            } else {
-              state.loans.push({id:tx.loanId, name:note||'Loan', principal:amount, remaining:amount, date, note, createdAt:tx.createdAt});
-            }
-          } else if(type === 'payback'){
-            if(!loanId) return toast('Select a loan to pay back');
-            tx.type='expense';
-            tx.category='Loan Repayment';
-            tx.loanId=loanId;
-            const loan=state.loans.find(l=>String(l.id)===String(loanId));
-            if(!loan) return toast('Selected loan was not found');
-            if(amount > Number(loan.remaining || 0)) return toast('Payback cannot exceed remaining loan');
-            loan.remaining = Math.max(0, Number(loan.remaining || 0) - amount);
-          } else {
-            tx.type = type;
-          }
-
-          state.transactions.push(tx);
-          save();
-          render();
-          toast(type === 'loan' ? 'Loan saved' : type === 'payback' ? 'Loan payback saved' : 'Saved');
-          if($('form')) $('form').reset();
-          if($('date')) $('date').value=today;
-          if($('loanSelect')) $('loanSelect').disabled=true;
-
-          return;
+        if (event.target.id === 'budgetForm') {
+          stripInput(document.getElementById('budgetAmount'));
         }
-      });
-
-      ['theme','switch'].forEach(id => $(id)?.addEventListener('click', () => {
-        state.settings.theme = state.settings.theme === 'dark' ? 'light' : 'dark';
-        document.body.classList.toggle('dark', state.settings.theme === 'dark');
-        save();
-      }));
-
-      document.addEventListener('change', e => {
-        if(e.target && e.target.id === 'syncUrl'){
-          state.settings.syncUrl = e.target.value.trim();
-          save();
-        }
-      });
-
-      function bindUI(){
-        const syncUrl = $('syncUrl');
-        if(syncUrl){
-          syncUrl.value = state.settings.syncUrl || '';
-        }
-        const budgetCategory = $('budgetCategory');
-        if(budgetCategory){
-          const categories = state.categories.filter(c=>c.type==='expense');
-          budgetCategory.innerHTML = categories.length ? categories.map(c=>`<option value="${c.name}">${esc(c.name)}</option>`).join('') : '<option value="">General</option>';
-        }
-      }
-
-      injectPlanningUI();
-      bindUI();
-      if($('date')) $('date').value = today;
-      setType(state.currentType);
-      render();
-      show('home');
+      }, true);
     })();
   </script>
 </body>
