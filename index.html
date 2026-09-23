@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0b1020">
   <link rel="manifest" href="manifest.webmanifest">
-  <title>MoneyFlow v3</title>
+  <link rel="icon" href="icons/icon-192.png">
+  <title>MoneyFlow</title>
 
   <style>
     :root{
       --bg:#f5f7fb;
-      --panel:#fff;
+      --panel:#ffffff;
       --panel-alt:#eef3ff;
       --text:#101827;
       --muted:#64748b;
@@ -21,7 +22,9 @@
       --success:#10b981;
       --warning:#f59e0b;
       --shadow:0 18px 40px rgba(15,23,42,.08);
-      --nav:#fff;
+      --nav:#ffffff;
+      --chip:#f1f5f9;
+      --black:#0b1020;
     }
 
     body.dark{
@@ -38,10 +41,11 @@
       --warning:#fbbf24;
       --shadow:0 18px 40px rgba(2,6,23,.65);
       --nav:#111827;
+      --chip:#0f172a;
+      --black:#e5eefb;
     }
 
     *{box-sizing:border-box}
-
     html,body{
       margin:0;
       min-height:100%;
@@ -49,19 +53,116 @@
       color:var(--text);
       font-family:Inter,Segoe UI,Arial,sans-serif;
     }
-
     body{min-height:100vh}
-
     button,input,select{font:inherit}
-
+    a{text-decoration:none}
+    img{max-width:100%}
     h1,h2,h3,p{margin-top:0}
+    ul{padding-left:18px}
+
+    .app{
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    header{
+      position:sticky;
+      top:0;
+      z-index:40;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 18px;
+      background:rgba(245,247,251,.9);
+      backdrop-filter:blur(10px);
+      border-bottom:1px solid var(--line);
+    }
+
+    body.dark header{
+      background:rgba(11,16,32,.82);
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .brand b{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:34px;height:34px;
+      border-radius:12px;
+      background:linear-gradient(135deg,var(--primary),#4f46e5);
+      color:#fff;
+      box-shadow:0 12px 24px rgba(37,99,235,.25);
+      font-size:1.1rem;
+    }
+
+    .brand span{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      line-height:1.1;
+    }
+
+    .brand strong{
+      font-size:1rem;
+      color:var(--text);
+    }
+
+    .brand small{
+      color:var(--muted);
+      font-size:11px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    header .right{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    button{
+      cursor:pointer;
+      border:none;
+    }
+
+    .ghost{
+      background:rgba(148,163,184,.14);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:10px;
+      font-weight:600;
+    }
+
+    #theme,
+    header button[data-page="settings"],
+    #install{
+      padding:10px 12px;
+      border-radius:10px;
+      background:rgba(148,163,184,.13);
+      color:var(--text);
+      font-weight:600;
+    }
+
+    .hidden{display:none !important}
+
+    main{
+      flex:1;
+      width:100%;
+    }
 
     .page{
       display:none;
-      min-height:calc(100vh - 75px);
       max-width:1100px;
       margin:0 auto;
       padding:18px 18px 95px;
+      min-height:calc(100vh - 150px);
     }
 
     .page.active{display:block}
@@ -70,13 +171,13 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:18px;
-      padding:22px 20px;
-      margin-bottom:18px;
+      gap:16px;
+      padding:20px 18px;
       border:1px solid var(--line);
       border-radius:22px;
       background:linear-gradient(135deg,var(--panel-alt),var(--panel));
       box-shadow:var(--shadow);
+      margin-bottom:18px;
     }
 
     .hero h1{
@@ -90,48 +191,212 @@
       color:var(--muted);
     }
 
-    small{
+    .hero small{
       color:var(--muted);
-      font-size:11px;
       letter-spacing:.14em;
+      text-transform:uppercase;
+      font-size:11px;
+    }
+
+    #month{
+      width:180px;
+      border:1px solid var(--line);
+      background:var(--panel);
+      color:var(--text);
+      border-radius:12px;
+      padding:10px 12px;
+    }
+
+    .focus{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      padding:16px 18px;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:var(--panel);
+      box-shadow:var(--shadow);
+      margin-bottom:18px;
+    }
+
+    .focus i{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:42px;height:42px;
+      border-radius:12px;
+      background:linear-gradient(135deg,#fef3c7,#fcd34d);
+      color:#7c2d12;
+      font-size:20px;
+      font-weight:700;
+    }
+
+    .focus small{
+      display:block;
+      color:var(--muted);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      font-size:11px;
+      margin-bottom:6px;
+    }
+
+    .focus b{
+      display:block;
+      font-size:1.1rem;
+      margin-bottom:6px;
+    }
+
+    .balance{
+      padding:18px 18px 14px;
+      border:1px solid var(--line);
+      border-radius:20px;
+      background:var(--panel);
+      box-shadow:var(--shadow);
+      margin-bottom:18px;
+    }
+
+    .balance > div:first-child{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:8px;
+    }
+
+    .balance span{
+      color:var(--muted);
+      font-size:12px;
+      letter-spacing:.08em;
       text-transform:uppercase;
     }
 
-    .pill{
-      padding:8px 12px;
-      border:1px solid rgba(37,99,235,.18);
+    .balance em{
+      display:inline-block;
+      font-style:normal;
+      padding:5px 10px;
       border-radius:999px;
-      background:rgba(37,99,235,.08);
-      color:var(--primary);
-      font-size:12px;
+      background:rgba(16,185,129,.12);
+      color:var(--success);
+      font-size:11px;
       font-weight:700;
-      white-space:nowrap;
     }
 
-    .bi{
+    .balance strong{
+      display:block;
+      font-size:clamp(2rem,3vw,2.6rem);
+      margin:10px 0 4px;
+    }
+
+    .balance small{
+      display:block;
+      color:var(--muted);
+      margin-bottom:10px;
+    }
+
+    .progress{
+      width:100%;
+      height:10px;
+      background:rgba(148,163,184,.18);
+      border-radius:999px;
+      overflow:hidden;
+    }
+
+    .progress i{
+      display:block;
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg,var(--primary-2),var(--primary));
+      border-radius:inherit;
+    }
+
+    .balance .meta{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      margin-top:10px;
+      flex-wrap:wrap;
+    }
+
+    .balance .meta small{
+      color:var(--muted);
+      font-size:11px;
+    }
+
+    .stats{
       display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
+      grid-template-columns:repeat(4,minmax(0,1fr));
       gap:12px;
       margin:18px 0;
     }
 
-    .bi article{
+    .stats article{
       display:flex;
       flex-direction:column;
-      gap:8px;
-      min-height:110px;
+      gap:6px;
       padding:16px 14px;
       border:1px solid var(--line);
       border-radius:18px;
       background:var(--panel);
       box-shadow:var(--shadow);
+      min-height:120px;
     }
 
-    .bi article b{
-      color:var(--text);
-      font-size:1.55rem;
+    .stats article b{
+      font-size:1.45rem;
       font-weight:800;
     }
+
+    .stats article small{
+      color:var(--muted);
+      font-size:11px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    h2{
+      margin:18px 0 12px;
+      font-size:1.2rem;
+    }
+
+    .actions{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+      margin-bottom:20px;
+    }
+
+    .actions button{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:18px 16px;
+      border-radius:18px;
+      border:1px solid var(--line);
+      background:var(--panel);
+      color:var(--text);
+      box-shadow:var(--shadow);
+      text-align:left;
+      min-height:108px;
+    }
+
+    .actions button b{
+      display:block;
+      font-size:1rem;
+      margin-bottom:4px;
+    }
+
+    .actions button small{
+      color:var(--muted);
+      font-size:11px;
+      line-height:1.4;
+      display:block;
+    }
+
+    .actions button:first-child{color:var(--danger)}
+    .actions button:nth-child(2){color:var(--success)}
+    .actions button:nth-child(3){color:var(--warning)}
+    .actions button:nth-child(4){color:var(--primary)}
 
     .panel{
       margin-top:16px;
@@ -146,302 +411,268 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:12px;
-    }
-
-    .head h2{
-      margin:6px 0 0;
-      font-size:1.1rem;
-    }
-
-    .row{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      padding:12px 0;
-      border-bottom:1px solid var(--line);
-    }
-
-    .row:last-child{border-bottom:none}
-
-    .row b{font-weight:800}
-    .row b.up{color:var(--success)}
-    .row b.down{color:var(--danger)}
-
-    .form{
-      display:grid;
-      gap:14px;
-      padding:16px;
-      border:1px solid var(--line);
-      border-radius:20px;
-      background:var(--panel);
-      box-shadow:var(--shadow);
-    }
-
-    .tabs{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      margin-bottom:8px;
-    }
-
-    .tab{
-      padding:9px 13px;
-      border:1px solid var(--line);
-      border-radius:10px;
-      background:transparent;
-      color:var(--text);
-      cursor:pointer;
-    }
-
-    .tab.active{
-      border-color:rgba(37,99,235,.25);
-      background:var(--panel-alt);
-      color:var(--primary);
-      font-weight:700;
-    }
-
-    label{
-      display:grid;
-      gap:6px;
-      color:var(--muted);
-      font-size:12px;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-    }
-
-    input,select{
-      width:100%;
-      padding:11px 12px;
-      border:1px solid var(--line);
-      border-radius:12px;
-      outline:none;
-      background:transparent;
-      color:var(--text);
-    }
-
-    input:focus,select:focus{
-      border-color:var(--primary);
-      box-shadow:0 0 0 3px rgba(37,99,235,.12);
-    }
-
-    /*
-      Number inputs intentionally show numbers only.
-      Currency is displayed by the app output, not inside the input.
-    */
-    .number-input{
-      font-variant-numeric:tabular-nums;
-      letter-spacing:.02em;
-    }
-
-    .actions{
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      margin-top:8px;
-    }
-
-    button.primary,
-    button.secondary,
-    button.ghost{
-      padding:12px 16px;
-      border:0;
-      border-radius:12px;
-      cursor:pointer;
-      font-weight:700;
-    }
-
-    button.primary{
-      background:linear-gradient(135deg,var(--primary),#4f46e5);
-      color:#fff;
-    }
-
-    button.secondary{
-      background:linear-gradient(135deg,var(--primary-2),#14b8a6);
-      color:#062a27;
-    }
-
-    button.ghost{
-      background:rgba(148,163,184,.12);
-      color:var(--text);
-    }
-
-    .toolbar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      flex-wrap:wrap;
       gap:10px;
       margin-bottom:12px;
     }
 
-    .empty{
-      padding:12px 0;
-      color:var(--muted);
-      font-style:italic;
+    .head h2{
+      margin:0;
+      font-size:1.05rem;
     }
 
-    .budget-card,
-    .goal-card{
-      margin:10px 0;
-      padding:12px;
-      border:1px solid var(--line);
-      border-radius:16px;
-      background:var(--panel-alt);
+    .head button{
+      border:0;
+      background:rgba(37,99,235,.08);
+      color:var(--primary);
+      border-radius:10px;
+      padding:8px 10px;
+      font-weight:700;
     }
 
-    .budget-card .head,
-    .goal-card .head,
-    .loan-bi-panel .head{
+    #breakdown,
+    #recent,
+    #focusBI,
+    #pulse,
+    #cats{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .break-item,
+    .recent-item,
+    .focus-item,
+    .pulse-item,
+    .cat-item{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:var(--chip);
     }
 
-    .bar{
-      height:8px;
-      margin:10px 0 8px;
-      overflow:hidden;
-      border-radius:999px;
-      background:rgba(148,163,184,.18);
-    }
-
-    .bar i{
-      display:block;
-      height:100%;
-      border-radius:inherit;
-      background:linear-gradient(90deg,#2dd4bf,#60a5fa);
-    }
-
-    .budget-card.over .bar i{
-      background:linear-gradient(90deg,#ef4444,#f97316);
-    }
-
-    .budget-card.near .bar i{
-      background:linear-gradient(90deg,#fbbf24,#f59e0b);
-    }
-
-    .loan-bi-panel{margin-top:16px}
-
-    .loan-bi-legend{
-      display:flex;
-      flex-wrap:wrap;
-      gap:16px;
-      margin:8px 0 14px;
-      color:var(--muted);
-      font-size:12px;
-    }
-
-    .loan-bi-legend span{
-      display:flex;
-      align-items:center;
-      gap:6px;
-    }
-
-    .loan-bi-legend i{
-      display:inline-block;
-      width:10px;
-      height:10px;
-      border-radius:3px;
-    }
-
-    .loan-key{background:#60a5fa}
-    .payback-key{background:#f97316}
-
-    .loan-chart{
-      display:flex;
-      align-items:stretch;
-      gap:10px;
-      height:220px;
-      padding:0 4px;
-      overflow-x:auto;
-      border-bottom:1px solid var(--line);
-    }
-
-    .loan-chart-col{
+    .break-item span,
+    .recent-item span,
+    .focus-item span,
+    .pulse-item span,
+    .cat-item span{
       display:flex;
       flex-direction:column;
-      align-items:center;
-      justify-content:flex-end;
-      gap:4px;
-      min-width:70px;
-      height:100%;
+      gap:3px;
+      min-width:0;
+      color:var(--text);
+    }
+
+    .break-item small,
+    .recent-item small,
+    .focus-item small,
+    .pulse-item small,
+    .cat-item small{
+      color:var(--muted);
       font-size:11px;
     }
 
-    .loan-bars{
-      display:flex;
-      align-items:flex-end;
-      gap:4px;
-      height:175px;
+    .break-item b,
+    .recent-item b,
+    .focus-item b,
+    .pulse-item b,
+    .cat-item b{
+      font-weight:700;
     }
 
-    .loan-bar,
-    .payback-bar{
-      display:block;
-      width:18px;
-      min-height:2px;
-      border-radius:5px 5px 0 0;
-    }
-
-    .loan-bar{
-      background:linear-gradient(180deg,#60a5fa,#2563eb);
-    }
-
-    .payback-bar{
-      background:linear-gradient(180deg,#fb923c,#ea580c);
-    }
-
-    .loan-chart-col b{
-      max-width:70px;
-      overflow:hidden;
-      color:var(--muted);
-      font-size:10px;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-    }
-
-    nav{
-      position:fixed;
-      right:0;
-      bottom:0;
-      left:0;
-      z-index:20;
+    .page-small{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding:8px 18px 12px;
-      border-top:1px solid var(--line);
-      background:var(--nav);
-      box-shadow:0 -10px 25px rgba(2,6,23,.08);
+      gap:8px;
+      flex-wrap:wrap;
     }
 
-    nav button{
+    #dashboard h1,
+    #transactions h1,
+    #settings h1,
+    #add h1{
+      margin:8px 0 12px;
+      font-size:clamp(1.6rem,2vw,2.4rem);
+    }
+
+    #dashboard small,
+    #transactions small,
+    #settings small,
+    #add small{
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:var(--muted);
+      font-size:11px;
+    }
+
+    .bi{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+      margin:18px 0;
+    }
+
+    .bi article{
       display:flex;
       flex-direction:column;
-      align-items:center;
-      gap:4px;
-      min-width:64px;
-      border:0;
-      background:none;
-      color:var(--muted);
-      cursor:pointer;
+      justify-content:flex-start;
+      gap:8px;
+      min-height:110px;
+      padding:16px 14px;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
     }
 
-    nav button.active{color:var(--primary)}
+    .bi article b{
+      font-size:1.5rem;
+      font-weight:800;
+    }
 
-    nav .add{
+    .bi article small{
+      display:block;
+      color:var(--muted);
+      font-size:11px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+
+    .panel .head{
       display:flex;
       align-items:center;
-      justify-content:center;
-      width:54px;
-      height:54px;
-      border-radius:16px;
+      justify-content:space-between;
+      gap:8px;
+      margin-bottom:12px;
+    }
+
+    #chart{
+      display:block;
+      width:100%;
+      min-height:260px;
+      border-radius:12px;
+      background:linear-gradient(180deg,rgba(59,130,246,.04),rgba(16,185,129,.03));
+      border:1px solid var(--line);
+    }
+
+    .sync{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    .sync button,
+    #test,
+    #pull,
+    #push{
+      padding:10px 12px;
+      border-radius:10px;
+      background:rgba(148,163,184,.13);
+      color:var(--text);
+      font-weight:600;
+      border:1px solid var(--line);
+    }
+
+    #push.primary{
       background:linear-gradient(135deg,var(--primary),#4f46e5);
       color:#fff;
-      box-shadow:0 12px 24px rgba(37,99,235,.35);
+      border:none;
+    }
+
+    .table{
+      overflow:auto;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+    }
+
+    th,td{
+      padding:12px 10px;
+      border-bottom:1px solid var(--line);
+      text-align:left;
+      vertical-align:top;
+    }
+
+    th{
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-size:11px;
+    }
+
+    td .amount{
+      font-weight:700;
+    }
+
+    .danger{
+      background:#fee2e2 !important;
+      color:#b91c1c !important;
+    }
+
+    .switch{
+      position:relative;
+      display:inline-flex;
+      align-items:center;
+      width:58px;
+      height:30px;
+      padding:0 6px;
+      border-radius:999px;
+      background:rgba(148,163,184,.22);
+      border:1px solid var(--line);
+    }
+
+    .switch i{
+      position:absolute;
+      left:6px;
+      top:50%;
+      transform:translateY(-50%);
+      width:22px;
+      height:22px;
+      border-radius:50%;
+      background:#fff;
+      transition:.2s ease;
+      box-shadow:0 4px 8px rgba(0,0,0,.15);
+    }
+
+    .switch.on i{
+      left:calc(100% - 28px);
+      background:var(--primary);
+    }
+
+    .two{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+    }
+
+    .add-category-box{
+      margin-top:8px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .file{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      margin-top:8px;
+    }
+
+    .file input{
+      width:100%;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:transparent;
+      color:var(--text);
     }
 
     .toast{
@@ -465,268 +696,343 @@
       transform:translateY(0);
     }
 
+    #install.hidden{
+      display:none;
+    }
+
     @media (max-width:680px){
-      .bi{grid-template-columns:1fr}
+      .stats,.actions,.bi{grid-template-columns:1fr}
+      .two{grid-template-columns:1fr}
       .page{padding:18px 14px 92px}
-      .hero{
-        align-items:flex-start;
-        flex-direction:column;
-      }
+      .hero{flex-direction:column;align-items:flex-start}
     }
   </style>
 </head>
-
 <body>
   <div id="toast" class="toast"></div>
 
-  <section id="home" class="page active">
-    <div class="hero">
-      <div>
-        <small id="greet">WELCOME</small>
-        <h1 id="greetTitle">Welcome back 👋</h1>
-        <p id="focusMsg">Your money story will appear here.</p>
-      </div>
-      <div class="pill">MoneyFlow v3</div>
+  <header>
+    <div class="brand">
+      <b>₿</b>
+      <span>
+        <strong>MoneyFlow</strong>
+        <small>Personal Finance • BI</small>
+      </span>
     </div>
 
-    <div class="panel">
-      <div class="head">
+    <div class="right">
+      <button id="install" class="ghost hidden" type="button">Install</button>
+      <button id="theme" type="button">☾</button>
+      <button type="button" data-page="settings">⚙</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="home" class="page active">
+      <div class="hero">
         <div>
-          <small>Focus</small>
-          <h2>Latest Money Focus</h2>
+          <small id="greet">WELCOME</small>
+          <h1 id="greetTitle">Welcome back 👋</h1>
+          <p id="focusMsg">Your money story will appear here.</p>
+        </div>
+
+        <input id="month" type="month">
+      </div>
+
+      <div class="focus">
+        <i>✦</i>
+        <div>
+          <small>Today's focus</small>
+          <b id="focusTitle">Start your money log</b>
+          <span id="focusDetail">Add your first transaction.</span>
         </div>
       </div>
 
-      <div class="row">
-        <span>Income overview</span>
-        <b id="focusSummary">0 MMK</b>
-      </div>
-
-      <div class="row">
-        <span>Loan balance</span>
-        <b id="loanSummary">0 MMK</b>
-      </div>
-    </div>
-  </section>
-
-  <section id="dashboard" class="page">
-    <small>MONEY INTELLIGENCE</small>
-    <h1>Dashboard</h1>
-    <p>Money flowing trend + Focus BI reports</p>
-
-    <div class="bi">
-      <article>
-        <small>Cash flow</small>
-        <b id="cashflow">0 MMK</b>
-      </article>
-
-      <article>
-        <small>Spent</small>
-        <b id="spent">0 MMK</b>
-      </article>
-
-      <article>
-        <small>Remaining</small>
-        <b id="remaining">0 MMK</b>
-      </article>
-    </div>
-
-    <div class="panel">
-      <div class="head">
+      <div class="balance">
         <div>
-          <small>Reports</small>
-          <h2>Expense insights</h2>
+          <span>Remaining money</span>
+          <em id="pill">On track</em>
+        </div>
+
+        <strong id="remaining">0 MMK</strong>
+        <small>Income minus expenses, loans and credit paybacks</small>
+
+        <div class="progress">
+          <i id="progress"></i>
+        </div>
+
+        <div class="meta">
+          <small id="committed">0% committed</small>
+          <small id="saving">0% savings rate</small>
         </div>
       </div>
-      <ul id="reportList" style="list-style:none;padding:0;margin:12px 0 0;"></ul>
-    </div>
 
-    <div class="panel">
-      <div class="head">
-        <div>
-          <small>Budgets</small>
-          <h2>Budget status</h2>
-        </div>
+      <div class="stats">
+        <article>
+          Income
+          <b id="income">0 MMK</b>
+          <small>Money in</small>
+        </article>
+
+        <article>
+          Expenses
+          <b id="expense">0 MMK</b>
+          <small>Daily spending</small>
+        </article>
+
+        <article>
+          Loans
+          <b id="loan">0 MMK</b>
+          <small>Debt payments</small>
+        </article>
+
+        <article>
+          Credit
+          <b id="credit">0 MMK</b>
+          <small>Paybacks</small>
+        </article>
       </div>
-      <div id="budgets"></div>
-    </div>
 
-    <div class="panel">
-      <div class="head">
-        <div>
-          <small>Goals</small>
-          <h2>Savings goals</h2>
-        </div>
+      <h2>Quick actions</h2>
+
+      <div class="actions">
+        <button type="button" data-add="expense">
+          −
+          <span><b>Add Expense</b><small>Food, fuel, family</small></span>
+        </button>
+
+        <button type="button" data-add="income">
+          +
+          <span><b>Add Income</b><small>Salary, bonus</small></span>
+        </button>
+
+        <button type="button" data-add="loan">
+          ↘
+          <span><b>Loan Payment</b><small>Installment</small></span>
+        </button>
+
+        <button type="button" data-add="credit">
+          ↗
+          <span><b>Credit Payback</b><small>Card / credit</small></span>
+        </button>
       </div>
-      <div id="goals"></div>
-    </div>
 
-    <div class="panel loan-bi-panel">
-      <div class="head">
-        <div>
-          <small>Liability report</small>
-          <h2>Loan vs Payback Trend</h2>
+      <div class="panel">
+        <div class="head">
+          <h2>Spending breakdown</h2>
+          <button type="button" data-page="dashboard">Open BI</button>
         </div>
+        <div id="breakdown"></div>
       </div>
-      <div id="loanBI"></div>
-    </div>
-  </section>
 
-  <section id="add" class="page">
-    <button type="button" class="ghost" data-page="home">← Back</button>
+      <div class="panel">
+        <div class="head">
+          <h2>Recent activity</h2>
+          <button type="button" data-page="transactions">See all</button>
+        </div>
+        <div id="recent"></div>
+      </div>
+    </section>
 
-    <small>TRANSACTION</small>
-    <h1 id="formTitle">Add Expense</h1>
+    <section id="dashboard" class="page">
+      <small>MONEY INTELLIGENCE</small>
+      <h1>Dashboard</h1>
+      <p>Money flowing trend + Focus BI reports</p>
 
-    <form id="form" class="form">
+      <div class="bi">
+        <article>
+          Cash flow
+          <b id="cashflow">0 MMK</b>
+        </article>
+
+        <article>
+          Top spending
+          <b id="topSpend">—</b>
+          <small id="topAmt">0 MMK</small>
+        </article>
+
+        <article>
+          Largest activity
+          <b id="largest">—</b>
+          <small id="largestAmt">0 MMK</small>
+        </article>
+
+        <article>
+          Entries
+          <b id="rhythm">0</b>
+        </article>
+      </div>
+
+      <div class="panel">
+        <div class="head">
+          <h2>Money flowing trend</h2>
+          <small>Daily inflow vs outflow</small>
+        </div>
+        <canvas id="chart"></canvas>
+      </div>
+
+      <div class="panel">
+        <h2>Focus BI</h2>
+        <div id="focusBI"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Category pulse</h2>
+        <div id="pulse"></div>
+      </div>
+
+      <div class="panel">
+        <div class="head">
+          <h2>Sync status</h2>
+          <b id="syncStatus">Local only</b>
+        </div>
+        <p id="syncText">Configure Google Apps Script in Settings.</p>
+      </div>
+    </section>
+
+    <section id="add" class="page">
+      <button type="button" data-page="home" class="ghost">←</button>
+
+      <small>TRANSACTION</small>
+      <h1 id="formTitle">Add Expense</h1>
+
       <div class="tabs">
-        <button type="button" class="tab" data-add="expense">Expense</button>
-        <button type="button" class="tab" data-add="income">Income</button>
-        <button type="button" class="tab" data-add="loan">Loan</button>
-        <button type="button" class="tab" data-add="payback">Payback</button>
-        <button type="button" class="tab" data-add="credit">Credit</button>
+        <button type="button" class="tab" data-type="expense">Expense</button>
+        <button type="button" class="tab" data-type="income">Income</button>
+        <button type="button" class="tab" data-type="loan">Loan</button>
+        <button type="button" class="tab" data-type="payback">Payback</button>
+        <button type="button" class="tab" data-type="credit">Credit</button>
       </div>
 
-      <label>
-        Date
-        <input id="date" type="date">
-      </label>
-
-      <label>
-        Category
-        <select id="category"></select>
-      </label>
-
-      <label id="loanField" style="display:none;">
-        Loan to pay back
-        <select id="loanSelect"></select>
-      </label>
-
-      <label>
-        Amount
-        <input
-          id="amount"
-          class="number-input"
-          type="text"
-          inputmode="decimal"
-          autocomplete="off"
-          placeholder="0"
-          aria-label="Amount"
-        >
-      </label>
-
-      <label>
-        Note
-        <input
-          id="note"
-          type="text"
-          maxlength="100"
-          placeholder="Add note"
-        >
-      </label>
-
-      <div class="actions">
-        <button type="submit" class="primary">Save</button>
-        <button type="button" class="ghost" data-page="home">Cancel</button>
-      </div>
-    </form>
-  </section>
-
-  <section id="transactions" class="page">
-    <button type="button" class="ghost" data-page="home">← Back</button>
-
-    <small>HISTORY</small>
-    <h1>Transactions</h1>
-
-    <div class="toolbar">
-      <label style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        Month
-        <select id="month" style="width:180px;">
-          <option value="">Current month</option>
-        </select>
-      </label>
-    </div>
-
-    <div class="panel">
-      <div class="head">
-        <h2 id="txCount">Activity</h2>
-      </div>
-      <div id="txList"></div>
-    </div>
-  </section>
-
-  <section id="settings" class="page">
-    <button type="button" class="ghost" data-page="home">← Back</button>
-
-    <small>CUSTOMIZE</small>
-    <h1>Settings</h1>
-
-    <div class="panel">
-      <div class="head">
-        <div>
-          <small>Theme</small>
-          <h2>Dark mode</h2>
-        </div>
-        <button id="switch" type="button" class="secondary">Toggle</button>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="head">
-        <div>
-          <small>Sync</small>
-          <h2>Google Sheets sync</h2>
-        </div>
-      </div>
-
-      <label style="margin-top:12px;">
-        Apps Script URL
-        <input
-          id="syncUrl"
-          type="url"
-          placeholder="https://script.google.com/macros/s/.../exec"
-        >
-      </label>
-
-      <div class="actions">
-        <button type="button" class="primary" data-sync="push">Push</button>
-        <button type="button" class="secondary" data-sync="pull">Pull</button>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div class="head">
-        <div>
-          <small>Data</small>
-          <h2>Budget setup</h2>
-        </div>
-      </div>
-
-      <form id="budgetForm" class="form" style="margin-top:12px;">
+      <form id="form" class="panel">
         <label>
-          Budget category
-          <select id="budgetCategory"></select>
+          Amount
+          <div class="amount">
+            <span>MMK</span>
+            <input
+              id="amount"
+              class="number-input"
+              type="text"
+              inputmode="decimal"
+              min="1"
+              required
+              autocomplete="off"
+              placeholder="0"
+            >
+          </div>
+        </label>
+
+        <div class="two">
+          <label>
+            Date
+            <input id="date" type="date" required>
+          </label>
+
+          <label>
+            Category
+            <select id="category"></select>
+          </label>
+        </div>
+
+        <label id="loanField" style="display:none;">
+          Loan to pay back
+          <select id="loanSelect"></select>
         </label>
 
         <label>
-          Budget amount
-          <input
-            id="budgetAmount"
-            class="number-input"
-            type="text"
-            inputmode="decimal"
-            autocomplete="off"
-            placeholder="0"
-            aria-label="Budget amount"
-          >
+          Note
+          <input id="note" placeholder="What was this for?">
         </label>
 
-        <div class="actions">
-          <button type="submit" class="primary">Save budget</button>
-        </div>
+        <button class="primary" type="submit">Save transaction</button>
       </form>
-    </div>
-  </section>
+    </section>
+
+    <section id="transactions" class="page">
+      <button type="button" data-page="home" class="ghost">←</button>
+
+      <small>HISTORY</small>
+      <h1>Transactions</h1>
+
+      <div class="panel">
+        <div class="head">
+          <h2 id="txCount">Activity</h2>
+          <button id="clear" type="button" class="danger">Clear all</button>
+        </div>
+
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Activity</th>
+                <th>Amount</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="settings" class="page">
+      <button type="button" data-page="home" class="ghost">←</button>
+
+      <small>CUSTOMIZE</small>
+      <h1>Settings</h1>
+
+      <div class="panel">
+        <div class="head">
+          <h2>Dark mode</h2>
+          <button id="switch" class="switch" type="button"><i></i></button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Categories</h2>
+        <div id="cats"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Add category</h2>
+        <div class="two">
+          <input id="newCat" placeholder="Category name">
+          <select id="newType">
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+            <option value="loan">Loan</option>
+            <option value="credit">Credit Payback</option>
+          </select>
+        </div>
+        <button id="addCat" class="primary" type="button">Add category</button>
+      </div>
+
+      <div class="panel">
+        <h2>Google Sheets sync</h2>
+        <p>Ready for Google Apps Script as a data source.</p>
+
+        <input id="syncUrl" placeholder="Apps Script Web App /exec URL">
+
+        <div class="sync">
+          <button id="test" type="button">Test</button>
+          <button id="pull" type="button">Pull</button>
+          <button id="push" class="primary" type="button">Push</button>
+        </div>
+
+        <small>Use the included google-apps-script/Code.gs.</small>
+      </div>
+
+      <div class="panel">
+        <button id="export" type="button" class="ghost">Export backup JSON</button>
+
+        <label class="file">
+          Import backup JSON
+          <input id="import" type="file" accept=".json">
+        </label>
+      </div>
+    </section>
+  </main>
 
   <nav>
     <button type="button" data-page="home" class="active">
@@ -744,7 +1050,7 @@
     </button>
 
     <button type="button" data-page="transactions">
-      ◫
+      ☷
       <small>History</small>
     </button>
 
@@ -754,18 +1060,10 @@
     </button>
   </nav>
 
-  <!--
-    This script is intentionally loaded separately.
-    Do not paste app.js inside this file.
-  -->
+  <div id="toast" class="toast"></div>
+
   <script src="js/app.js" defer></script>
 
-  <!--
-    Number input enhancement:
-    - Shows comma separators while typing.
-    - Does not add currency inside the input.
-    - Removes commas before app.js converts the value with Number().
-  -->
   <script>
     (() => {
       'use strict';
@@ -809,18 +1107,15 @@
           const formatted = formatNumber(before);
 
           input.value = formatted;
+          const addedSeparators = (formatted.match(/,/g) || []).length -
+            (before.match(/,/g) || []).length;
 
-          if (document.activeElement === input) {
-            const addedSeparators = (formatted.match(/,/g) || []).length -
-              (before.match(/,/g) || []).length;
+          const nextPosition = Math.max(
+            0,
+            Math.min(formatted.length, (start || formatted.length) + addedSeparators)
+          );
 
-            const nextPosition = Math.max(
-              0,
-              Math.min(formatted.length, (start || formatted.length) + addedSeparators)
-            );
-
-            input.setSelectionRange(nextPosition, nextPosition);
-          }
+          input.setSelectionRange(nextPosition, nextPosition);
         });
 
         input.addEventListener('blur', () => formatInput(input));
@@ -829,10 +1124,6 @@
       setupInput('amount');
       setupInput('budgetAmount');
 
-      /*
-        This listener runs during capture before app.js receives submit.
-        It ensures Number("10,000") never becomes NaN.
-      */
       document.addEventListener('submit', event => {
         if (event.target.id === 'form') {
           stripInput(document.getElementById('amount'));
