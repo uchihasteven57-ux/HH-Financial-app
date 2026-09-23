@@ -1,9 +1,10 @@
-const CACHE_NAME = 'moneyflow-v4';
+const CACHE_NAME = 'moneyflow-v5';
 const APP_SHELL = [
   './',
   './index.html',
   './css/app.css',
   './js/app.js',
+  './js/number-format.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -12,7 +13,7 @@ const APP_SHELL = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL))
+      .then(cache => Promise.all(APP_SHELL.map(asset => cache.add(asset).catch(() => null))))
       .then(() => self.skipWaiting())
   );
 });
@@ -30,16 +31,21 @@ self.addEventListener('fetch', event => {
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
 
-  event.respondWith(
-    caches.match(event.request).then(cached => {
-      const network = fetch(event.request).then(response => {
-        if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-        }
-        return response;
-      }).catch(() => cached);
-      return cached || network;
-    })
-  );
+  event.respondWith((async () => {
+    const cached = await caches.match(event.request);
+    try {
+      const response = await fetch(event.request);
+      if (response.ok) {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(event.request, response.clone());
+      }
+      return response;
+    } catch (_) {
+      if (cached) return cached;
+      if (event.request.mode === 'navigate') {
+        return caches.match('./index.html');
+      }
+      return new Response('', { status: 503, statusText: 'Offline' });
+    }
+  })());
 });
