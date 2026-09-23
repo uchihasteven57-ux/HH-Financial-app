@@ -1,99 +1,124 @@
 (() => {
   'use strict';
 
-  // Additive loan/report enhancement. It observes the existing MoneyFlow state
-  // and does not replace existing handlers, forms, or navigation.
-  const STORAGE_KEY = 'moneyflow-v3';
+  const KEY = 'moneyflow-v3';
   const $ = id => document.getElementById(id);
   const money = value => `${Math.round(Number(value) || 0).toLocaleString()} MMK`;
-  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
-  const readState = () => {
+  function state() {
     try {
-      const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-      state.transactions = Array.isArray(state.transactions) ? state.transactions : [];
-      state.loans = Array.isArray(state.loans) ? state.loans : [];
-      state.reportMonth = state.reportMonth || new Date().toISOString().slice(0, 7);
-      return state;
+      const value = JSON.parse(localStorage.getItem(KEY) || '{}');
+      value.transactions = Array.isArray(value.transactions) ? value.transactions : [];
+      value.categories = Array.isArray(value.categories) ? value.categories : [];
+      value.budgets = Array.isArray(value.budgets) ? value.budgets : [];
+      value.goals = Array.isArray(value.goals) ? value.goals : [];
+      value.loans = Array.isArray(value.loans) ? value.loans : [];
+      value.settings = value.settings || {};
+      return value;
     } catch (_) {
-      return { transactions: [], loans: [], reportMonth: new Date().toISOString().slice(0, 7) };
+      return { transactions: [], categories: [], budgets: [], goals: [], loans: [], settings: {} };
     }
-  };
+  }
 
-  const loanData = state => {
-    const loans = state.loans.map(loan => ({
-      id: String(loan.id || ''),
-      name: String(loan.name || 'Loan'),
-      principal: Number(loan.principal) || 0,
-      remaining: Math.max(0, Number(loan.remaining) || 0)
-    }));
+  function save(value) {
+    try { localStorage.setItem(KEY, JSON.stringify(value)); } catch (_) {}
+  }
 
-    const byId = new Map(loans.map(loan => [loan.id, loan]));
-    state.transactions.forEach(tx => {
-      if (!tx.loanId) return;
-      const amount = Number(tx.amount) || 0;
-      let loan = byId.get(String(tx.loanId));
-      if (!loan && tx.type === 'income') {
-        loan = { id: String(tx.loanId), name: String(tx.note || 'Loan'), principal: amount, remaining: amount };
-        byId.set(loan.id, loan);
-      }
-      if (!loan) return;
-      if (tx.type === 'income') loan.principal += byId.has(loan.id) && loan.principal ? 0 : amount;
-      if (tx.type === 'expense') loan.remaining = Math.max(0, loan.remaining - amount);
+  async function sync(action, payload) {
+    const current = state();
+    const url = String(current.settings.syncUrl || '').trim();
+    if (!url) throw Error('Add the Apps Script /exec URL first.');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action }, payload || {}))
     });
 
-    return Array.from(byId.values());
-  };
-
-  const reportData = state => {
-    const month = state.reportMonth;
-    const rows = state.transactions.filter(tx => String(tx.date || '').slice(0, 7) === month);
-    const result = { income: 0, expense: 0, credit: 0, loanIn: 0, payback: 0, byCategory: {} };
-    rows.forEach(tx => {
-      const amount = Number(tx.amount) || 0;
-      if (tx.type === 'income') { result.income += amount; if (tx.loanId) result.loanIn += amount; }
-      if (tx.type === 'expense') { result.expense += amount; if (tx.loanId) result.payback += amount; const key = tx.category || 'General'; result.byCategory[key] = (result.byCategory[key] || 0) + amount; }
-      if (tx.type === 'credit') result.credit += amount;
-    });
-    result.net = result.income - result.expense - result.credit;
-    return result;
-  };
-
-  function inject() {
-    if ($('loanBiEnhancement')) return;
-    const dashboard = $('dashboard');
-    if (!dashboard) return;
-
-    const style = document.createElement('style');
-    style.id = 'loanBiEnhancementStyles';
-    style.textContent = '.loan-bi-enhancement{margin-top:16px}.loan-bi-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.loan-bi-stat{padding:10px;border:1px solid var(--line,rgba(148,163,184,.2));border-radius:12px}.loan-bi-stat small{display:block;color:var(--muted)}.loan-bi-stat strong{display:block;margin-top:4px}.loan-bi-list{display:grid;gap:8px;margin-top:12px}.loan-bi-row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line,rgba(148,163,184,.2));padding:8px 0}.loan-bi-bar{height:7px;border-radius:99px;background:rgba(148,163,184,.2);overflow:hidden;margin-top:5px}.loan-bi-bar i{display:block;height:100%;background:linear-gradient(90deg,#60a5fa,#2dd4bf)}@media(max-width:760px){.loan-bi-grid{grid-template-columns:1fr}}';
-    document.head.appendChild(style);
-
-    const panel = document.createElement('section');
-    panel.id = 'loanBiEnhancement';
-    panel.className = 'panel loan-bi-enhancement';
-    panel.innerHTML = '<div class="head"><div><small>LIABILITY &amp; REPORT BI</small><h2>Loan overview</h2></div></div><div id="loanBiEnhancementBody"></div>';
-    dashboard.appendChild(panel);
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) throw Error(result.error || `Sync failed (${response.status})`);
+    return result.data || result;
   }
 
-  function render() {
-    const body = $('loanBiEnhancementBody');
-    if (!body) return;
-    const state = readState();
-    const report = reportData(state);
-    const loans = loanData(state);
-    const maxCategory = Math.max(1, ...Object.values(report.byCategory));
-    body.innerHTML = `<div class="loan-bi-grid"><div class="loan-bi-stat"><small>Loan received</small><strong>${money(report.loanIn)}</strong></div><div class="loan-bi-stat"><small>Payback</small><strong>${money(report.payback)}</strong></div><div class="loan-bi-stat"><small>Outstanding</small><strong>${money(loans.reduce((sum, loan) => sum + loan.remaining, 0))}</strong></div><div class="loan-bi-stat"><small>Net cash flow</small><strong>${money(report.net)}</strong></div></div><div class="loan-bi-list">${loans.length ? loans.map(loan => `<div class="loan-bi-row"><span>${escapeHtml(loan.name)}<small>${money(loan.principal)} principal</small></span><b>${money(loan.remaining)}</b></div>`).join('') : '<div class="empty">No loan data yet</div>'}</div><div class="loan-bi-list">${Object.entries(report.byCategory).sort((a,b) => b[1] - a[1]).slice(0, 5).map(([category, amount]) => `<div><div class="loan-bi-row"><span>${escapeHtml(category)}</span><b>${money(amount)}</b></div><div class="loan-bi-bar"><i style="width:${Math.min(100, amount / maxCategory * 100)}%"></i></div></div>`).join('') || '<div class="empty">No expense data for this month</div>'}</div>`;
+  async function pull() {
+    try {
+      const data = await sync('getAll');
+      if (!data || !Array.isArray(data.transactions)) throw Error('Invalid response from Apps Script.');
+      const current = state();
+      current.transactions = data.transactions;
+      if (Array.isArray(data.categories) && data.categories.length) current.categories = data.categories;
+      current.budgets = Array.isArray(data.budgets) ? data.budgets : [];
+      current.goals = Array.isArray(data.goals) ? data.goals : [];
+      current.loans = Array.isArray(data.loans) ? data.loans : [];
+      current.settings.syncRevision = data.revision || current.settings.syncRevision || '';
+      current.settings.lastSynced = new Date().toISOString();
+      save(current);
+      location.reload();
+    } catch (error) {
+      if (typeof window.__moneyflowToast === 'function') window.__moneyflowToast(error.message);
+      else alert(error.message);
+    }
   }
 
-  function start() {
-    inject();
-    render();
-    window.addEventListener('storage', event => { if (event.key === STORAGE_KEY) render(); });
-    document.addEventListener('click', event => { if (event.target.closest('[data-page="dashboard"]')) setTimeout(render, 0); });
-    document.addEventListener('submit', () => setTimeout(render, 0));
-    document.addEventListener('change', event => { if (event.target.id === 'month') setTimeout(render, 0); });
+  async function push() {
+    try {
+      const current = state();
+      const data = await sync('replaceAll', {
+        transactions: current.transactions,
+        categories: current.categories,
+        budgets: current.budgets,
+        goals: current.goals,
+        loans: current.loans
+      });
+      current.settings.syncRevision = data.revision || current.settings.syncRevision || '';
+      current.settings.lastSynced = new Date().toISOString();
+      save(current);
+      if (typeof window.__moneyflowToast === 'function') window.__moneyflowToast('Synced to Google Sheets');
+      else alert('Synced to Google Sheets');
+    } catch (error) {
+      if (typeof window.__moneyflowToast === 'function') window.__moneyflowToast(error.message);
+      else alert(error.message);
+    }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true }); else start();
+  async function test() {
+    try {
+      await sync('status');
+      if (typeof window.__moneyflowToast === 'function') window.__moneyflowToast('Apps Script connection is working');
+      else alert('Apps Script connection is working');
+    } catch (error) {
+      if (typeof window.__moneyflowToast === 'function') window.__moneyflowToast(error.message);
+      else alert(error.message);
+    }
+  }
+
+  function renderLoanBI() {
+    const host = $('loanBI');
+    if (!host) return;
+    const current = state();
+    const month = current.reportMonth || new Date().toISOString().slice(0, 7);
+    const rows = current.transactions.filter(tx => String(tx.date || '').slice(0, 7) === month);
+    const received = rows.filter(tx => tx.type === 'income' && tx.loanId).reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+    const payback = rows.filter(tx => tx.type === 'expense' && tx.loanId).reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+    const outstanding = current.loans.reduce((sum, loan) => sum + Math.max(0, Number(loan.remaining || 0)), 0);
+    host.innerHTML = `<div class="loan-bi-grid"><div class="loan-bi-stat"><small>Loan received</small><strong>${money(received)}</strong></div><div class="loan-bi-stat"><small>Loan payback</small><strong>${money(payback)}</strong></div><div class="loan-bi-stat"><small>Outstanding liability</small><strong>${money(outstanding)}</strong></div></div><div class="loan-bi-list">${current.loans.length ? current.loans.map(loan => `<div class="loan-bi-row"><span>${esc(loan.name || 'Loan')}<small>Principal ${money(loan.principal)}</small></span><b>${money(loan.remaining)}</b></div>`).join('') : '<div class="empty">No loan records yet</div>'}</div>`;
+  }
+
+  // Capture sync controls before app.js's old JSON request handler runs.
+  document.addEventListener('click', event => {
+    const button = event.target.closest('#pull,#push,#test,[data-sync="pull"],[data-sync="push"]');
+    if (!button) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (button.id === 'pull' || button.dataset.sync === 'pull') pull();
+    else if (button.id === 'test') test();
+    else push();
+  }, true);
+
+  window.addEventListener('storage', renderLoanBI);
+  document.addEventListener('submit', () => setTimeout(renderLoanBI, 0));
+  document.addEventListener('change', event => { if (event.target.id === 'month' || event.target.id === 'syncUrl') setTimeout(renderLoanBI, 0); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderLoanBI, { once: true });
+  else renderLoanBI();
 })();
