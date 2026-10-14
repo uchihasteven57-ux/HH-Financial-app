@@ -4,306 +4,661 @@
   const KEY = 'moneyflow-v3';
   const $ = id => document.getElementById(id);
   const today = new Date().toISOString().slice(0, 10);
-  const currentMonth = today.slice(0, 7);
+
   const defaults = [
-    ['Food & Drinks', 'expense'], ['Transportation', 'expense'], ['Family', 'expense'],
-    ['Housing', 'expense'], ['Utilities', 'expense'], ['Shopping', 'expense'],
-    ['Health', 'expense'], ['Education', 'expense'], ['Salary', 'income'], ['Bonus', 'income']
+    ['Food & Drinks', 'expense'],
+    ['Transportation', 'expense'],
+    ['Family', 'expense'],
+    ['Housing', 'expense'],
+    ['Utilities', 'expense'],
+    ['Shopping', 'expense'],
+    ['Health', 'expense'],
+    ['Education', 'expense'],
+    ['Salary', 'income'],
+    ['Bonus', 'income']
   ];
+
   const fallback = {
-    transactions: [], categories: defaults.map(([name, type]) => ({ name, type })),
-    budgets: [], goals: [], loans: [], reportMonth: currentMonth,
-    settings: { theme: 'light', syncUrl: '', syncRevision: '', lastSynced: '' }
+    transactions: [],
+    categories: defaults.map(([name, type]) => ({ name, type })),
+    budgets: [],
+    goals: [],
+    loans: [],
+    settings: {
+      theme: 'light',
+      syncUrl: '',
+      syncRevision: '',
+      lastSynced: ''
+    },
+    reportMonth: today.slice(0, 7)
   };
 
   let state = load();
   let syncing = false;
-  normalizeState();
+
+  state.settings = Object.assign({}, fallback.settings, state.settings || {});
+  state.budgets = Array.isArray(state.budgets) ? state.budgets : [];
+  state.goals = Array.isArray(state.goals) ? state.goals : [];
+  state.loans = Array.isArray(state.loans) ? state.loans : [];
+  state.transactions = Array.isArray(state.transactions) ? state.transactions : [];
+  state.categories = Array.isArray(state.categories) && state.categories.length ? state.categories : fallback.categories;
+  state.currentType = state.currentType || 'expense';
+
+  function uid(prefix = 'id') {
+    if (window.crypto && window.crypto.randomUUID) return `${prefix}-${window.crypto.randomUUID()}`;
+    return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
 
   function load() {
     try {
       const raw = JSON.parse(localStorage.getItem(KEY) || 'null') || {};
-      return Object.assign({}, fallback, raw);
-    } catch (_) {
-      return JSON.parse(JSON.stringify(fallback));
+      const base = Object.assign({}, fallback, raw);
+
+      base.categories = Array.isArray(base.categories) && base.categories.length ? base.categories : fallback.categories;
+      base.budgets = Array.isArray(base.budgets) ? base.budgets : [];
+      base.goals = Array.isArray(base.goals) ? base.goals : [];
+      base.loans = Array.isArray(base.loans) ? base.loans : [];
+      base.transactions = Array.isArray(base.transactions) ? base.transactions.map(tx => {
+        const item = Object.assign({}, tx);
+        if (item.type === 'loan') {
+          item.type = 'income';
+          item.category = item.category || 'Loan';
+        }
+        return item;
+      }) : [];
+
+      return base;
+    } catch (error) {
+      return fallback;
     }
   }
 
-  function normalizeState() {
-    state.settings = Object.assign({}, fallback.settings, state.settings || {});
-    state.categories = Array.isArray(state.categories) && state.categories.length ? state.categories : fallback.categories.slice();
-    ['transactions', 'budgets', 'goals', 'loans'].forEach(key => { if (!Array.isArray(state[key])) state[key] = []; });
-    state.reportMonth = /^\d{4}-\d{2}$/.test(String(state.reportMonth || '')) ? state.reportMonth : currentMonth;
-    state.currentType = state.currentType || 'expense';
-    state.transactions = state.transactions.map(tx => {
-      const item = Object.assign({}, tx);
-      const category = String(item.category || '').toLowerCase();
-      if (item.type === 'loan' || category === 'loan' || category === 'loan received') {
-        item.type = 'income';
-        item.category = 'Loan';
-        item.loanId = item.loanId || uid('loan');
-      }
-      if (category === 'loan repayment' || category === 'loan payback') {
-        item.type = 'expense';
-        item.category = 'Loan Repayment';
-      }
-      return item;
-    });
-    rebuildMissingLoans();
-    save();
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+    } catch (error) {}
   }
 
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (_) {} }
-  function uid(prefix) { return `${prefix || 'id'}-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
-  function money(value) { return `${Math.round(Number(value) || 0).toLocaleString()} MMK`; }
-  function number(value) { return Number(String(value == null ? '' : value).replace(/,/g, '')) || 0; }
-  function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])); }
-  function toast(message) { const el = $('toast'); if (!el) return; el.textContent = message; el.classList.add('on'); clearTimeout(el._timer); el._timer = setTimeout(() => el.classList.remove('on'), 2200); }
-  function month() { return state.reportMonth || currentMonth; }
-  function items() { return state.transactions.filter(tx => String(tx.date || '').slice(0, 7) === month()); }
-  function cleanLoanName(tx) { return String(tx.note || 'Loan').trim() || 'Loan'; }
-
-  function rebuildMissingLoans() {
-    state.transactions.filter(tx => tx.type === 'income' && tx.loanId).forEach(tx => {
-      if (!state.loans.some(loan => String(loan.id) === String(tx.loanId))) {
-        state.loans.push({ id: tx.loanId, name: cleanLoanName(tx), principal: number(tx.amount), remaining: number(tx.amount), date: tx.date || today, note: tx.note || '', createdAt: tx.createdAt || new Date().toISOString() });
-      }
-    });
+  function money(n) {
+    return `${Math.round(Number(n) || 0).toLocaleString()} MMK`;
   }
 
-  function loanTransactions() { return state.transactions.filter(tx => tx.loanId); }
-  function loanReceived(list) { return list.filter(tx => tx.type === 'income' && tx.loanId).reduce((sum, tx) => sum + number(tx.amount), 0); }
-  function loanPaybacks(list) { return list.filter(tx => tx.type === 'expense' && tx.loanId).reduce((sum, tx) => sum + number(tx.amount), 0); }
-  function outstanding() { return state.loans.reduce((sum, loan) => sum + Math.max(0, number(loan.remaining)), 0); }
+  function esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[c]));
+  }
 
-  function totals(list) {
-    return list.reduce((result, tx) => {
-      const amount = number(tx.amount);
-      if (tx.type === 'income') result.income += amount;
-      else if (tx.type === 'expense') result.expense += amount;
-      else if (tx.type === 'credit') result.credit += amount;
-      return result;
+  function toast(m) {
+    const e = $('toast');
+    if (!e) return;
+    e.textContent = m;
+    e.classList.add('on');
+    clearTimeout(e._timer);
+    e._timer = setTimeout(() => e.classList.remove('on'), 2200);
+  }
+
+  function month() {
+    return state.reportMonth || today.slice(0, 7);
+  }
+
+  function items() {
+    return (state.transactions || []).filter(t => String(t.date || '').slice(0, 7) === month());
+  }
+
+  function totals(xs) {
+    return xs.reduce((r, t) => {
+      const n = Number(t.amount) || 0;
+      if (t.type === 'income') r.income += n;
+      else if (t.type === 'expense') r.expense += n;
+      else if (t.type === 'credit') r.credit += n;
+      return r;
     }, { income: 0, expense: 0, credit: 0 });
   }
 
-  function show(id) {
-    document.querySelectorAll('.page').forEach(page => page.classList.toggle('active', page.id === id));
-    document.querySelectorAll('nav [data-page]').forEach(button => button.classList.toggle('active', button.dataset.page === id));
-  }
-
-  function populateCategories() {
-    const select = $('category');
-    if (!select) return;
-    const type = state.currentType === 'payback' ? 'expense' : state.currentType;
-    const list = state.currentType === 'loan' ? [{ name: 'Loan' }] : state.categories.filter(category => category.type === type);
-    select.innerHTML = list.length ? list.map(category => `<option value="${esc(category.name)}">${esc(category.name)}</option>`).join('') : '<option value="General">General</option>';
-  }
-
   function renderLoanSelect() {
-    const select = $('loanSelect');
-    if (!select) return;
-    const activeLoans = state.loans.filter(loan => number(loan.remaining) > 0);
-    select.innerHTML = activeLoans.length ? activeLoans.map(loan => `<option value="${esc(loan.id)}">${esc(loan.name || 'Loan')} (${money(loan.remaining)})</option>`).join('') : '<option value="">No active loan</option>';
+    const el = $('loanSelect');
+    if (!el) return;
+
+    const active = (state.loans || []).filter(l => Number(l.remaining) > 0);
+    if (!active.length) {
+      el.innerHTML = '<option value="">No active loan</option>';
+      return;
+    }
+
+    el.innerHTML = active.map(l => `
+      <option value="${esc(l.id)}">${esc(l.name || 'Loan')} (${money(l.remaining)})</option>
+    `).join('');
+  }
+
+  function updateMonthOptions() {
+    const el = $('month');
+    if (!el) return;
+
+    const months = Array.from(new Set((state.transactions || []).map(t => String(t.date || '').slice(0, 7)).filter(Boolean))).sort();
+
+    // If the UI control is an <input type="month"> set its value, otherwise populate <select>
+    if (el.tagName === 'INPUT' && el.type === 'month') {
+      if (!months.length) {
+        el.value = '';
+        return;
+      }
+      // choose most recent month if current reportMonth not present
+      if (!state.reportMonth || !months.includes(state.reportMonth)) {
+        state.reportMonth = months[months.length - 1];
+      }
+      el.value = state.reportMonth;
+    } else {
+      if (!months.length) {
+        el.innerHTML = '<option value="">Current month</option>';
+        el.value = '';
+        return;
+      }
+      el.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+      el.value = state.reportMonth || months[months.length - 1];
+    }
+  }
+
+  function greeting() {
+    const h = new Date().getHours();
+    const part = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : h < 21 ? 'Evening' : 'Night';
+
+    if ($('greet')) $('greet').textContent = `GOOD ${part.toUpperCase()}`;
+    if ($('greetTitle')) $('greetTitle').textContent = 'Welcome back 👋';
+    if ($('focusSummary')) $('focusSummary').textContent = money((state.transactions || []).reduce((sum, t) => sum + (t.type === 'income' ? Number(t.amount) || 0 : 0), 0));
+    if ($('loanSummary')) $('loanSummary').textContent = money((state.loans || []).reduce((sum, l) => sum + (Number(l.remaining) || 0), 0));
   }
 
   function setType(type) {
     state.currentType = type;
-    const titles = { expense: 'Add Expense', income: 'Add Income', loan: 'Add Loan', payback: 'Add Loan Payback', credit: 'Add Credit Payment' };
+
+    const titles = {
+      expense: 'Add Expense',
+      income: 'Add Income',
+      loan: 'Add Loan',
+      payback: 'Add Loan Payback',
+      credit: 'Add Credit Payment'
+    };
+
     if ($('formTitle')) $('formTitle').textContent = titles[type] || 'Add Entry';
     if ($('amount')) $('amount').value = '';
     if ($('note')) $('note').value = '';
     if ($('loanSelect')) $('loanSelect').disabled = type !== 'payback';
-    if ($('loanField')) $('loanField').hidden = type !== 'payback';
-    document.querySelectorAll('.tab').forEach(button => button.classList.toggle('active', button.dataset.add === type || button.dataset.type === type));
+    if ($('loanField')) $('loanField').style.display = type === 'payback' ? 'block' : 'none';
+
+    const tabButtons = document.querySelectorAll('.tab');
+    tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.add === type));
+
     populateCategories();
-    renderLoanSelect();
   }
 
-  function updateMonthOptions() {
-    const select = $('month');
-    if (!select) return;
-    const values = Array.from(new Set(state.transactions.map(tx => String(tx.date || '').slice(0, 7)).filter(Boolean)));
-    if (!values.includes(month())) values.push(month());
-    select.value = month();
+  function populateCategories() {
+    const s = $('category');
+    if (!s) return;
+
+    const type = state.currentType === 'payback' ? 'expense' : state.currentType;
+
+    let list = [];
+    if (state.currentType === 'loan') {
+      list = [{ name: 'Loan', type: 'income' }];
+    } else {
+      list = (state.categories || []).filter(c => c.type === type);
+    }
+
+    s.innerHTML = list.length
+      ? list.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('')
+      : '<option value="General">General</option>';
   }
 
-  function renderHome() {
-    const list = items();
-    const totalsNow = totals(list);
-    const net = totalsNow.income - totalsNow.expense - totalsNow.credit;
-    [['income', totalsNow.income], ['expense', totalsNow.expense], ['credit', totalsNow.credit], ['remaining', net]].forEach(([id, value]) => { if ($(id)) $(id).textContent = money(value); });
-    if ($('loan')) $('loan').textContent = money(loanPaybacks(list));
-    if ($('loanSummary')) $('loanSummary').textContent = money(outstanding());
-    if ($('txCount')) $('txCount').textContent = `Activity (${list.length})`;
-    if ($('remaining')) $('remaining').textContent = money(net);
-    const recent = $('recent');
-    if (recent) recent.innerHTML = list.slice().reverse().slice(0, 8).map(tx => `<div class="row"><span>${esc(tx.type.toUpperCase())} ${esc(tx.category || 'General')}</span><b class="${tx.type === 'income' ? 'up' : 'down'}">${tx.type === 'income' ? '+' : '-'}${money(tx.amount)}</b></div>`).join('') || '<div class="empty">No transactions</div>';
-    const breakdown = $('breakdown');
-    if (breakdown) breakdown.innerHTML = categoryRows(list).slice(0, 5).map(row => `<div class="row"><span>${esc(row.name)}</span><b>${money(row.amount)}</b></div>`).join('') || '<div class="empty">No expense data</div>';
+  function show(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === id));
+    document.querySelectorAll('nav [data-page]').forEach(b => b.classList.toggle('active', b.dataset.page === id));
   }
 
-  function categoryRows(list) {
-    const grouped = {};
-    list.filter(tx => tx.type === 'expense' && !tx.loanId).forEach(tx => { const key = tx.category || 'General'; grouped[key] = (grouped[key] || 0) + number(tx.amount); });
-    return Object.entries(grouped).sort((a, b) => b[1] - a[1]).map(([name, amount]) => ({ name, amount }));
+  function budgetRows() {
+    const spent = {};
+    items()
+      .filter(t => t.type === 'expense')
+      .forEach(t => {
+        const key = t.category || 'General';
+        spent[key] = (spent[key] || 0) + Number(t.amount || 0);
+      });
+
+    return (state.budgets || [])
+      .map(b => {
+        const target = Number(b.amount) || 0;
+        const used = spent[b.category] || 0;
+        const pct = target ? Math.min(100, Math.round((used / target) * 100)) : 0;
+        return { category: b.category, amount: target, used, pct };
+      })
+      .filter(b => b.amount > 0);
+  }
+
+  function renderBudgets() {
+    const rows = budgetRows();
+    const html = rows.length
+      ? rows.map(b => `
+        <div class="budget-card ${b.pct >= 100 ? 'over' : b.pct >= 80 ? 'near' : ''}">
+          <div class="head">
+            <b>${esc(b.category)}</b>
+            <strong>${money(b.used)}</strong>
+          </div>
+          <div class="bar">
+            <i style="width:${Math.min(100, b.pct)}%"></i>
+          </div>
+          <small>${money(b.amount)} budget</small>
+        </div>
+      `).join('')
+      : '<div class="empty">No budgets yet</div>';
+
+    const el = $('budgets');
+    if (el) el.innerHTML = html;
+  }
+
+  function renderGoals() {
+    const html = (state.goals || []).length
+      ? (state.goals || []).map(g => {
+          const pct = g.target ? Math.min(100, Number(g.saved || 0) / Number(g.target) * 100) : 0;
+          return `
+            <div class="goal-card">
+              <div class="head">
+                <b>${esc(g.name)}</b>
+                <strong>${money(g.saved || 0)}</strong>
+              </div>
+              <div class="bar">
+                <i style="width:${pct}%"></i>
+              </div>
+              <small>${money(g.target || 0)} target</small>
+            </div>
+          `;
+        }).join('')
+      : '<div class="empty">No goals yet</div>';
+
+    const el = $('goals');
+    if (el) el.innerHTML = html;
   }
 
   function renderReports() {
-    const list = items();
-    const totalsNow = totals(list);
-    const categories = categoryRows(list);
-    const net = totalsNow.income - totalsNow.expense - totalsNow.credit;
-    if ($('cashflow')) $('cashflow').textContent = money(net);
-    if ($('spent')) $('spent').textContent = money(totalsNow.expense);
-    if ($('remaining')) $('remaining').textContent = money(net);
-    if ($('topSpend')) $('topSpend').textContent = categories[0] ? categories[0].name : '—';
-    if ($('topAmt')) $('topAmt').textContent = categories[0] ? money(categories[0].amount) : '0 MMK';
-    if ($('rhythm')) $('rhythm').textContent = String(list.length);
-    if ($('reportList')) $('reportList').innerHTML = categories.length ? categories.slice(0, 5).map(row => `<li><span>${esc(row.name)}</span><b>${money(row.amount)}</b></li>`).join('') : '<li><span>No expense data</span><b>0 MMK</b></li>';
-    renderMonthlyTrend();
-    renderLoanBI();
-  }
-
-  function monthlyRows() {
+    const xs = items();
+    const t = totals(xs);
     const grouped = {};
-    state.transactions.forEach(tx => {
-      const key = String(tx.date || '').slice(0, 7);
-      if (!key) return;
-      if (!grouped[key]) grouped[key] = { month: key, income: 0, expense: 0, credit: 0, loan: 0, payback: 0 };
-      const amount = number(tx.amount);
-      if (tx.type === 'income') { grouped[key].income += amount; if (tx.loanId) grouped[key].loan += amount; }
-      if (tx.type === 'expense') { grouped[key].expense += amount; if (tx.loanId) grouped[key].payback += amount; }
-      if (tx.type === 'credit') grouped[key].credit += amount;
+
+    xs.filter(x => x.type === 'expense').forEach(x => {
+      const key = x.category || 'General';
+      grouped[key] = (grouped[key] || 0) + Number(x.amount || 0);
     });
-    return Object.values(grouped).sort((a, b) => a.month.localeCompare(b.month)).slice(-6);
+
+    const top = Object.entries(grouped).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const el = $('reportList');
+
+    if (el) {
+      el.innerHTML = top.length
+        ? top.map(([name, val]) => `<li><span>${esc(name)}</span><b>${money(val)}</b></li>`).join('')
+        : '<li><span>No expense data</span><b>0 MMK</b></li>';
+    }
+
+    if ($('cashflow')) $('cashflow').textContent = money(t.income - t.expense - t.credit);
+    if ($('spent')) $('spent').textContent = money(t.expense);
+    if ($('remaining')) $('remaining').textContent = money(t.income - t.expense - t.credit);
   }
 
-  function renderMonthlyTrend() {
-    const canvas = $('chart');
-    const host = $('focusBI');
-    const rows = monthlyRows();
-    if (host) host.innerHTML = rows.length ? rows.map(row => `<div class="row"><span>${esc(row.month)}<small>Inflow ${money(row.income)} · Outflow ${money(row.expense + row.credit)}</small></span><b>${money(row.income - row.expense - row.credit)}</b></div>`).join('') : '<div class="empty">No monthly data yet</div>';
-    if (!canvas || !canvas.getContext) return;
-    const ctx = canvas.getContext('2d');
-    const width = canvas.clientWidth || 600;
-    const height = canvas.height = 220;
-    canvas.width = width;
-    ctx.clearRect(0, 0, width, height);
-    if (!rows.length) return;
-    const max = Math.max(1, ...rows.flatMap(row => [row.income, row.expense + row.credit]));
-    const step = width / Math.max(1, rows.length);
-    rows.forEach((row, index) => {
-      const x = step * index + step / 2;
-      const incomeHeight = row.income / max * 150;
-      const outHeight = (row.expense + row.credit) / max * 150;
-      ctx.fillStyle = '#34d399'; ctx.fillRect(x - 18, 175 - incomeHeight, 14, incomeHeight);
-      ctx.fillStyle = '#f97316'; ctx.fillRect(x + 4, 175 - outHeight, 14, outHeight);
-      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted') || '#64748b'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(row.month, x, 198);
+  function loanTrend() {
+    const result = {};
+    const txs = state.transactions || [];
+
+    txs.forEach(tx => {
+      if (!tx.loanId) return;
+      const monthKey = String(tx.date || '').slice(0, 7);
+      if (!monthKey) return;
+
+      if (!result[monthKey]) result[monthKey] = { loan: 0, payback: 0 };
+
+      if (tx.type === 'income') result[monthKey].loan += Number(tx.amount) || 0;
+      if (tx.type === 'expense') result[monthKey].payback += Number(tx.amount) || 0;
     });
+
+    return Object.keys(result).sort().slice(-6).map(monthKey => ({
+      month: monthKey,
+      loan: result[monthKey].loan,
+      payback: result[monthKey].payback
+    }));
   }
 
   function renderLoanBI() {
     const host = $('loanBI');
     if (!host) return;
-    const list = items();
-    const received = loanReceived(list);
-    const payback = loanPaybacks(list);
-    host.innerHTML = `<div class="loan-bi-grid"><div class="loan-bi-stat"><small>Loan received</small><strong>${money(received)}</strong></div><div class="loan-bi-stat"><small>Loan payback</small><strong>${money(payback)}</strong></div><div class="loan-bi-stat"><small>Outstanding liability</small><strong>${money(outstanding())}</strong></div></div><div class="loan-bi-list">${state.loans.length ? state.loans.map(loan => `<div class="loan-bi-row"><span>${esc(loan.name || 'Loan')}<small>Principal ${money(loan.principal)}</small></span><b>${money(loan.remaining)}</b></div>`).join('') : '<div class="empty">No loan records yet</div>'}</div>`;
+
+    const rows = loanTrend();
+    if (!rows.length) {
+      host.innerHTML = '<div class="empty">No loan or payback data yet</div>';
+      return;
+    }
+
+    const max = Math.max(1, ...rows.flatMap(r => [r.loan, r.payback]));
+    host.innerHTML = `
+      <div class="loan-bi-legend">
+        <span><i class="loan-key"></i>Loan received</span>
+        <span><i class="payback-key"></i>Payback</span>
+      </div>
+      <div class="loan-chart">
+        ${rows.map(r => `
+          <div class="loan-chart-col">
+            <div class="loan-bars">
+              <span class="loan-bar" title="Loan: ${money(r.loan)}" style="height:${Math.max(2, (r.loan / max) * 100)}%"></span>
+              <span class="payback-bar" title="Payback: ${money(r.payback)}" style="height:${Math.max(2, (r.payback / max) * 100)}%"></span>
+            </div>
+            <small>${esc(r.month)}</small>
+            <b>${money(r.loan - r.payback)}</b>
+          </div>
+        `).join('')}
+      </div>
+    `;
   }
 
-  function renderTransactions() {
-    const body = $('rows');
-    if (!body) return;
-    body.innerHTML = state.transactions.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).map(tx => `<tr><td>${esc(tx.date || '')}</td><td>${esc(tx.category || 'General')}</td><td class="${tx.type === 'income' ? 'up' : 'down'}">${tx.type === 'income' ? '+' : '-'}${money(tx.amount)}</td><td><button type="button" data-delete="${esc(tx.id)}">×</button></td></tr>`).join('') || '<tr><td colspan="4">No transactions</td></tr>';
+  function ensureLoanBI() {
+    if ($('loanBI')) return;
+
+    const dashboard = $('dashboard');
+    if (!dashboard) return;
+
+    const panel = document.createElement('div');
+    panel.className = 'panel loan-bi-panel';
+    panel.innerHTML = `
+      <div class="head">
+        <div>
+          <small>LIABILITY REPORT</small>
+          <h2>Loan vs Payback Trend</h2>
+        </div>
+      </div>
+      <div id="loanBI"></div>
+    `;
+    dashboard.appendChild(panel);
   }
 
-  function renderCategories() {
-    const host = $('cats');
-    if (host) host.innerHTML = state.categories.map((category, index) => `<div class="row"><span>${esc(category.name)} <small>${esc(category.type)}</small></span><button type="button" data-delete-category="${index}">×</button></div>`).join('');
+  function render() {
+    ensureLoanBI();
+    greeting();
+    renderLoanSelect();
+    updateMonthOptions();
+
+    const xs = items();
+    const t = totals(xs);
+    const net = t.income - t.expense - t.credit;
+
+    [['income', t.income], ['expense', t.expense], ['credit', t.credit], ['remaining', net]].forEach(([key, val]) => {
+      const el = $(key);
+      if (el) el.textContent = money(val);
+    });
+
+    if ($('txCount')) $('txCount').textContent = `Activity (${xs.length})`;
+
+    const txList = $('txList');
+    if (txList) {
+      txList.innerHTML = xs.slice().reverse().map(tx => `
+        <div class="row">
+          <span>${esc(tx.type.toUpperCase())} ${esc(tx.category || 'General')}</span>
+          <b class="${tx.type === 'income' ? 'up' : 'down'}">${tx.type === 'income' ? '+' : '-'}${money(tx.amount)}</b>
+        </div>
+      `).join('') || '<div class="empty">No transactions</div>';
+    }
+
+    renderBudgets();
+    renderGoals();
+    renderReports();
+    renderLoanBI();
+    theme();
   }
 
-  function bindUI() {
-    if ($('syncUrl')) $('syncUrl').value = state.settings.syncUrl || '';
-    if ($('month')) $('month').value = month();
-    renderCategories();
+  function injectPlanningUI() {
+    if ($('planningStyles')) return;
+
+    const st = document.createElement('style');
+    st.id = 'planningStyles';
+    st.textContent = `
+      .planning-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+      .budget-card,.goal-card,.panel{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px}
+      .budget-card .head,.goal-card .head,.loan-bi-panel .head{display:flex;justify-content:space-between;align-items:center}
+      .bar{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin:8px 0}
+      .bar i{display:block;height:100%;background:linear-gradient(90deg,#2dd4bf,#60a5fa);border-radius:inherit}
+      .budget-card.over .bar i{background:linear-gradient(90deg,#ef4444,#f97316)}
+      .budget-card.near .bar i{background:linear-gradient(90deg,#fbbf24,#f59e0b)}
+      .loan-bi-panel{margin-top:16px}
+      .loan-bi-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin:8px 0 14px}
+      .loan-bi-legend span{display:flex;align-items:center;gap:6px}
+      .loan-bi-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+      .loan-key{background:#60a5fa}
+      .payback-key{background:#f97316}
+      .loan-chart{height:220px;display:flex;align-items:stretch;gap:10px;border-bottom:1px solid rgba(255,255,255,.16);overflow-x:auto;padding:0 4px}
+      .loan-chart-col{min-width:70px;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;font-size:11px}
+      .loan-chart-col b{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;max-width:70px;text-overflow:ellipsis}
+      .loan-bars{height:175px;display:flex;align-items:flex-end;gap:4px}
+      .loan-bar,.payback-bar{display:block;width:18px;min-height:2px;border-radius:5px 5px 0 0}
+      .loan-bar{background:linear-gradient(180deg,#60a5fa,#2563eb)}
+      .payback-bar{background:linear-gradient(180deg,#fb923c,#ea580c)}
+    `;
+    document.head.appendChild(st);
   }
 
-  function theme() { document.body.classList.toggle('dark', state.settings.theme === 'dark'); if ($('switch')) $('switch').classList.toggle('on', state.settings.theme === 'dark'); }
+  function theme() {
+    document.body.classList.toggle('dark', state.settings.theme === 'dark');
+    if ($('switch')) $('switch').classList.toggle('on', state.settings.theme === 'dark');
+  }
 
-  async function api(action, payload) {
+  async function api(action, payload = {}) {
     if (!state.settings.syncUrl) throw Error('Add the Apps Script URL first.');
-    const response = await fetch(state.settings.syncUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ action }, payload || {})) });
-    const result = await response.json().catch(() => ({}));
-    if (!result.ok) throw Error(result.error || 'Sync failed');
-    return result.data || result;
+
+    const r = await fetch(state.settings.syncUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ action }, payload))
+    });
+
+    const out = await r.json().catch(() => ({}));
+    if (!out || !out.ok) throw Error((out && out.error) || 'Sync failed');
+    return out.data || out;
+  }
+
+  async function pushChanges() {
+    if (syncing || !state.settings.syncUrl) return;
+
+    syncing = true;
+    try {
+      const r = await api('replaceAll', {
+        transactions: state.transactions,
+        categories: state.categories,
+        budgets: state.budgets,
+        goals: state.goals,
+        loans: state.loans
+      });
+
+      state.settings.syncRevision = (r && r.revision) || state.settings.syncRevision;
+      state.settings.lastSynced = new Date().toISOString();
+      save();
+      toast('Synced to Google Sheets');
+    } catch (error) {
+      toast(error.message || 'Sync failed');
+    } finally {
+      syncing = false;
+      render();
+    }
   }
 
   async function pull() {
-    if (syncing) return; syncing = true;
-    try { const data = await api('getAll'); if (data && Array.isArray(data.transactions)) { state.transactions = data.transactions; state.categories = Array.isArray(data.categories) && data.categories.length ? data.categories : fallback.categories.slice(); state.budgets = Array.isArray(data.budgets) ? data.budgets : []; state.goals = Array.isArray(data.goals) ? data.goals : []; state.loans = Array.isArray(data.loans) ? data.loans : []; rebuildMissingLoans(); state.settings.syncRevision = data.revision || state.settings.syncRevision; state.settings.lastSynced = new Date().toISOString(); save(); bindUI(); toast('Pulled from Google Sheets'); } } catch (error) { toast(error.message); } finally { syncing = false; render(); }
+    if (syncing || !state.settings.syncUrl) return;
+
+    syncing = true;
+    try {
+      const r = await api('getAll');
+      if (r && r.transactions) {
+        state.transactions = r.transactions || [];
+        state.categories = r.categories || [];
+        state.budgets = r.budgets || [];
+        state.goals = r.goals || [];
+        state.loans = r.loans || [];
+
+        // Ensure reportMonth follows the synced data: pick most recent month present
+        const months = Array.from(new Set((state.transactions || []).map(t => String(t.date || '').slice(0, 7)).filter(Boolean))).sort();
+        if (months.length) {
+          if (!state.reportMonth || !months.includes(state.reportMonth)) {
+            state.reportMonth = months[months.length - 1];
+          }
+        }
+
+        save();
+        toast('Pulled from Google Sheets');
+      }
+    } catch (error) {
+      toast(error.message || 'Pull failed');
+    } finally {
+      syncing = false;
+      render();
+    }
   }
 
-  async function push() {
-    if (syncing) return; syncing = true;
-    try { const data = await api('replaceAll', { transactions: state.transactions, categories: state.categories, budgets: state.budgets, goals: state.goals, loans: state.loans }); state.settings.syncRevision = data.revision || state.settings.syncRevision; state.settings.lastSynced = new Date().toISOString(); save(); toast('Synced to Google Sheets'); } catch (error) { toast(error.message); } finally { syncing = false; render(); }
-  }
+  document.addEventListener('click', e => {
+    const pageButton = e.target.closest('[data-page]');
+    if (pageButton) return show(pageButton.dataset.page);
 
-  document.addEventListener('click', event => {
-    const page = event.target.closest('[data-page]'); if (page) { show(page.dataset.page); return; }
-    const add = event.target.closest('[data-add]'); if (add) { setType(add.dataset.add); show('add'); return; }
-    const tab = event.target.closest('[data-type]'); if (tab) { setType(tab.dataset.type); show('add'); return; }
-    const syncButton = event.target.closest('#pull,[data-sync="pull"]'); if (syncButton) { pull(); return; }
-    if (event.target.closest('#push,[data-sync="push"]')) { push(); return; }
-    const del = event.target.closest('[data-delete]'); if (del) { state.transactions = state.transactions.filter(tx => String(tx.id) !== String(del.dataset.delete)); save(); render(); return; }
-    const delCategory = event.target.closest('[data-delete-category]'); if (delCategory) { state.categories.splice(Number(delCategory.dataset.deleteCategory), 1); save(); renderCategories(); populateCategories(); return; }
-    if (event.target.id === 'clear') { if (confirm('Clear all transactions?')) { state.transactions = []; state.loans = []; save(); render(); } return; }
-    if (event.target.id === 'theme' || event.target.id === 'switch') { state.settings.theme = state.settings.theme === 'dark' ? 'light' : 'dark'; save(); theme(); }
-    if (event.target.id === 'addCat') { const name = ($('newCat')?.value || '').trim(); const type = $('newType')?.value || 'expense'; if (!name) return toast('Enter a category name'); state.categories.push({ name, type, createdAt: new Date().toISOString() }); $('newCat').value = ''; save(); renderCategories(); populateCategories(); toast('Category added'); }
-    if (event.target.id === 'export') { const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'moneyflow-backup.json'; link.click(); URL.revokeObjectURL(link.href); }
-  });
-
-  document.addEventListener('change', event => { if (event.target.id === 'month') { state.reportMonth = event.target.value || currentMonth; save(); render(); } if (event.target.id === 'syncUrl') { state.settings.syncUrl = event.target.value.trim(); save(); } });
-
-  document.addEventListener('submit', event => {
-    if (event.target.id !== 'form') return;
-    event.preventDefault();
-    const amount = number($('amount')?.value);
-    if (amount <= 0) return toast('Enter an amount greater than 0');
-    const type = state.currentType;
-    const date = $('date')?.value || today;
-    const note = ($('note')?.value || '').trim();
-    const tx = { id: uid('tx'), type, amount, date, category: $('category')?.value || 'General', note, loanId: '', createdAt: new Date().toISOString() };
-
-    if (type === 'loan') {
-      const loanId = uid('loan');
-      tx.type = 'income'; tx.category = 'Loan'; tx.loanId = loanId;
-      state.loans.push({ id: loanId, name: note || 'Loan', principal: amount, remaining: amount, date, note, createdAt: tx.createdAt });
-    } else if (type === 'payback') {
-      const loanId = $('loanSelect')?.value || '';
-      const loan = state.loans.find(item => String(item.id) === String(loanId));
-      if (!loan) return toast('Select an active loan to repay');
-      if (amount > number(loan.remaining)) return toast('Payback cannot exceed remaining loan');
-      tx.type = 'expense'; tx.category = 'Loan Repayment'; tx.loanId = loanId;
-      loan.remaining = Math.max(0, number(loan.remaining) - amount);
-    } else if (type === 'credit') {
-      tx.type = 'credit';
-    } else {
-      tx.type = type;
+    const addButton = e.target.closest('[data-add]');
+    if (addButton) {
+      setType(addButton.dataset.add);
+      show('add');
+      return;
     }
 
-    state.transactions.push(tx);
-    save();
-    event.target.reset();
-    if ($('date')) $('date').value = today;
-    render();
-    toast(type === 'loan' ? 'Loan received and recorded as income' : type === 'payback' ? 'Loan payback recorded as expense' : 'Saved');
+    const syncButton = e.target.closest('[data-sync]');
+    if (syncButton) {
+      if (syncButton.dataset.sync === 'push') return pushChanges();
+      if (syncButton.dataset.sync === 'pull') return pull();
+    }
   });
 
-  function render() {
-    normalizeState();
-    bindUI(); populateCategories(); renderLoanSelect(); updateMonthOptions(); renderHome(); renderReports(); renderTransactions(); theme();
+  document.addEventListener('submit', e => {
+    if (e.target.id === 'budgetForm') {
+      e.preventDefault();
+      const category = $('budgetCategory').value;
+      const amount = Number($('budgetAmount').value);
+
+      if (!category || amount <= 0) return toast('Enter a valid budget amount');
+
+      state.budgets = state.budgets.filter(b => b.category !== category);
+      state.budgets.push({ category, amount });
+      save();
+      render();
+      toast('Budget saved');
+      return;
+    }
+
+    if (e.target.id === 'form') {
+      e.preventDefault();
+
+      const amount = Number($('amount').value);
+      if (!amount || amount <= 0) return toast('Enter an amount greater than 0');
+
+      const type = state.currentType;
+      const date = $('date') ? ($('date').value || today) : today;
+      const note = ($('note') && $('note').value || '').trim();
+      let loanId = $('loanSelect') ? ($('loanSelect').value || '') : '';
+
+      const tx = {
+        id: uid('tx'),
+        type,
+        amount,
+        date,
+        category: ($('category') && $('category').value) || 'General',
+        note,
+        loanId,
+        createdAt: new Date().toISOString()
+      };
+
+      if (type === 'loan') {
+        tx.type = 'income';
+        tx.category = 'Loan';
+        tx.loanId = uid('loan');
+
+        const existing = (state.loans || []).find(l => String(l.id) === String(tx.loanId));
+        if (existing) {
+          existing.principal = (Number(existing.principal) || 0) + amount;
+          existing.remaining = (Number(existing.remaining) || 0) + amount;
+        } else {
+          state.loans.push({
+            id: tx.loanId,
+            name: note || 'Loan',
+            principal: amount,
+            remaining: amount,
+            date,
+            note,
+            createdAt: tx.createdAt
+          });
+        }
+      } else if (type === 'payback') {
+        if (!loanId) return toast('Select a loan to pay back');
+        tx.type = 'expense';
+        tx.category = 'Loan Repayment';
+        tx.loanId = loanId;
+
+        const loan = (state.loans || []).find(l => String(l.id) === String(loanId));
+        if (!loan) return toast('Selected loan was not found');
+
+        if (amount > Number(loan.remaining || 0)) {
+          return toast('Payback cannot exceed remaining loan');
+        }
+
+        loan.remaining = Math.max(0, Number(loan.remaining || 0) - amount);
+      } else {
+        tx.type = type;
+      }
+
+      state.transactions.push(tx);
+      save();
+      render();
+      toast(type === 'loan' ? 'Loan saved' : type === 'payback' ? 'Loan payback saved' : 'Saved');
+
+      if ($('form')) $('form').reset();
+      if ($('date')) $('date').value = today;
+      if ($('loanSelect')) $('loanSelect').disabled = true;
+    }
+  });
+
+  ['theme', 'switch'].forEach(id => $(id)?.addEventListener('click', () => {
+    state.settings.theme = state.settings.theme === 'dark' ? 'light' : 'dark';
+    document.body.classList.toggle('dark', state.settings.theme === 'dark');
+    save();
+  }));
+
+  document.addEventListener('change', e => {
+    if (e.target && e.target.id === 'syncUrl') {
+      state.settings.syncUrl = e.target.value.trim();
+      save();
+    }
+
+    if (e.target && e.target.id === 'month') {
+      // when user picks a new month, update state and re-render
+      state.reportMonth = e.target.value || '';
+      save();
+      render();
+    }
+  });
+
+  function bindUI() {
+    const syncUrl = $('syncUrl');
+    if (syncUrl) syncUrl.value = state.settings.syncUrl || '';
+
+    const budgetCategory = $('budgetCategory');
+    if (budgetCategory) {
+      const categories = (state.categories || []).filter(c => c.type === 'expense');
+      budgetCategory.innerHTML = categories.length
+        ? categories.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('')
+        : '<option value="">General</option>';
+    }
   }
 
+  injectPlanningUI();
+  bindUI();
   if ($('date')) $('date').value = today;
   setType(state.currentType);
   render();
